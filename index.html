@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>光復隧道溢淹預警監測 POC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.119.0/Build/Cesium/Widgets/widgets.css">
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="brand-mark">TRA</div>
+        <div>
+          <p class="agency">國營臺灣鐵路股份有限公司</p>
+          <h1>光復隧道溢淹預警監測圖台</h1>
+          <p class="subtitle">北口擋土牆與軌道周邊設施 · 第一版 HTML5 POC</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span>圖號 GFT-POC-01</span>
+        <select aria-label="使用者角色">
+          <option>值班員 · 系統管理者</option>
+          <option>維護人員</option>
+          <option>查詢人員</option>
+        </select>
+      </div>
+    </header>
+
+    <div class="mobile-toggle">
+      <button id="menuToggle" type="button">選單</button>
+      <strong>光復隧道監測 POC</strong>
+    </div>
+
+    <div class="app-shell">
+      <nav class="icon-rail" aria-label="主選單" id="mainNav"></nav>
+
+      <aside class="layer-panel" id="layerPanel">
+        <div class="panel-section">
+          <h2>圖層</h2>
+          <label><input type="checkbox" checked data-layer="rail"> 臺東線鐵路</label>
+          <label><input type="checkbox" checked data-layer="tunnel"> 光復隧道</label>
+          <label><input type="checkbox" checked data-layer="wall"> 擋土牆示意</label>
+          <label><input type="checkbox" checked data-layer="points"> 溢淹監測點</label>
+          <label><input type="checkbox" checked data-layer="rain"> 雨量筒</label>
+          <label><input type="checkbox" checked data-layer="camera"> CCTV</label>
+        </div>
+
+        <div class="panel-section">
+          <h2>風險分級 <span>Risk Class</span></h2>
+          <div class="legend-row"><i class="level l3"></i><b>L3 緊急</b><small>行動值待校正</small></div>
+          <div class="legend-row"><i class="level l2"></i><b>L2 警戒</b><small>警戒值待校正</small></div>
+          <div class="legend-row"><i class="level l1"></i><b>L1 注意</b><small>趨勢或品質事件</small></div>
+          <div class="legend-row"><i class="level l0"></i><b>L0 正常</b><small>持續監測</small></div>
+          <div class="legend-row"><i class="level off"></i><b>離線</b><small>心跳逾時</small></div>
+        </div>
+
+        <div class="panel-section compact">
+          <h2>資料界線</h2>
+          <p>POC 示意位置，正式座標、設備序號、警戒值與通報程序待現場測量及機關核定。</p>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section class="view active" data-view="map">
+          <div class="map-frame">
+            <div id="cesiumContainer"></div>
+            <svg id="fallbackMap" viewBox="0 0 1000 520" role="img" aria-label="光復隧道監測點示意圖"></svg>
+            <div class="map-notice">POC 示意位置，正式座標待現場測量確認</div>
+            <article class="feature-card" id="featureCard">
+              <button id="closeFeature" type="button" aria-label="關閉">×</button>
+              <h3>光復隧道北口</h3>
+              <p>點選監測點查看目前液位、傾斜、雨量與告警狀態。</p>
+            </article>
+          </div>
+          <div class="timeline-panel">
+            <div class="control-strip">
+              <label>風險情境
+                <select id="scenarioSelect"></select>
+              </label>
+              <button id="stepBack" type="button" title="回前一格">◀</button>
+              <button id="playPause" type="button" title="播放或暫停">▶</button>
+              <button id="stepForward" type="button" title="往後一格">▶</button>
+              <button id="resetSim" type="button">回到現在</button>
+              <label>速度
+                <select id="speedSelect"></select>
+              </label>
+              <strong id="currentTime">--</strong>
+              <span id="modeBadge">POC</span>
+            </div>
+            <div class="risk-timeline" id="riskTimeline"></div>
+          </div>
+        </section>
+
+        <section class="view" data-view="dashboard">
+          <div class="content-grid">
+            <article class="wide module">
+              <h2>20 點液位矩陣</h2>
+              <div class="point-matrix" id="pointMatrix"></div>
+            </article>
+            <article class="module">
+              <h2>近 60 分鐘趨勢</h2>
+              <canvas id="trendChart" width="760" height="310"></canvas>
+            </article>
+            <article class="module">
+              <h2>資料品質與告警</h2>
+              <div id="alertTimeline" class="event-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-view="cctv">
+          <div class="content-grid camera-grid" id="cameraGrid"></div>
+        </section>
+
+        <section class="view" data-view="query">
+          <article class="module">
+            <h2>資料查詢</h2>
+            <div class="form-row">
+              <label>監測點 <select id="queryPoint"></select></label>
+              <label>資料品質 <select id="queryQuality"><option value="">全部</option><option>GOOD</option><option>SUSPECT</option><option>OFFLINE</option></select></label>
+              <button id="exportCsv" type="button">下載 CSV</button>
+            </div>
+            <div class="table-wrap">
+              <table id="queryTable"></table>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" data-view="statistics">
+          <div class="content-grid">
+            <article class="module">
+              <h2>差異排行</h2>
+              <div id="differenceRank" class="rank-list"></div>
+            </article>
+            <article class="module">
+              <h2>傾斜排行</h2>
+              <div id="tiltRank" class="rank-list"></div>
+            </article>
+            <article class="module wide">
+              <h2>統計摘要</h2>
+              <div id="statisticsSummary" class="summary-grid"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-view="integration">
+          <div class="content-grid">
+            <article class="module wide">
+              <h2>介接監測</h2>
+              <div id="integrationList" class="integration-list"></div>
+            </article>
+            <article class="module">
+              <h2>API 邊界</h2>
+              <pre>{
+  "telemetry": "/api/v1/telemetry",
+  "alerts": "/api/v1/alerts",
+  "reports": "/api/v1/reports",
+  "mode": "mock-adapter"
+}</pre>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-view="settings">
+          <article class="module settings">
+            <h2>系統設定</h2>
+            <div class="form-row">
+              <label>L1 注意水位 <input id="thresholdL1" type="number" step="0.1" value="1.6"></label>
+              <label>L2 警戒水位 <input id="thresholdL2" type="number" step="0.1" value="2.2"></label>
+              <label>L3 緊急水位 <input id="thresholdL3" type="number" step="0.1" value="2.8"></label>
+              <button id="applyThresholds" type="button">套用</button>
+            </div>
+            <p>門檻值為 POC 展示參數，正式值需依現場高程、試運轉與機關核定調整。</p>
+          </article>
+        </section>
+      </main>
+
+      <aside class="risk-panel">
+        <header>
+          <h2>風險值</h2>
+          <span id="rightPanelTime">--</span>
+        </header>
+        <div class="risk-cards" id="riskCards"></div>
+
+        <section>
+          <h3>各區風險列表</h3>
+          <div class="region-grid">
+            <span>北口 <b id="northStatus">待資料</b></span>
+            <span>南口 <b>待資料</b></span>
+            <span>中區 <b>待資料</b></span>
+            <span>東側 <b>待資料</b></span>
+          </div>
+          <p class="fine-print">設施尚無正式行政區或營運區歸屬，統計以光復隧道北口示意範圍呈現。</p>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span>颱風資料時間 <b>示意</b></span>
+      <span>更新狀態 <b id="updateStatus">模擬持續時間</b></span>
+      <span>比例尺 <b>示意縮放</b></span>
+      <a href="docs/cost-estimate.html">費用估算 HTML</a>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
+    <script src="js/mock-data.js"></script>
+    <script src="js/simulation-engine.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

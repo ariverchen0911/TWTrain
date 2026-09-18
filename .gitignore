@@ -1,0 +1,15 @@
+ref/
+tmp/
+outputs/
+messageImage_*.jpg
+儀器配置圖型.pdf
+node_modules/
+.env
+.env.*
+*.log
+*.zip
+*.7z
+*.bak
+*.tmp
+Thumbs.db
+.DS_Store

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>光復隧道監測資訊系統費用估算</title>
+    <style>
+      :root {
+        --paper: #f5f0e6;
+        --panel: #eee7da;
+        --ink: #191611;
+        --muted: #6f6658;
+        --line: #1d1a16;
+        --red: #d90429;
+        --orange: #df6b21;
+        --yellow: #e9bf2f;
+        --green: #238b45;
+        --blue: #2f6f91;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Microsoft JhengHei", "Noto Sans TC", Arial, sans-serif;
+        letter-spacing: 0;
+      }
+
+      header {
+        padding: 24px 34px;
+        border-bottom: 3px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { font-size: 28px; margin-bottom: 6px; }
+      h2 { font-size: 20px; border-bottom: 2px solid var(--line); padding-bottom: 8px; }
+      h3 { font-size: 17px; }
+      .muted { color: var(--muted); line-height: 1.7; }
+
+      main {
+        max-width: 1420px;
+        margin: 0 auto;
+        padding: 22px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+
+      .card, section {
+        background: var(--panel);
+        border: 2px solid var(--line);
+        padding: 16px;
+        margin-bottom: 14px;
+      }
+
+      .card b {
+        display: block;
+        font-size: 30px;
+        margin-top: 6px;
+      }
+
+      .card.red { background: var(--red); color: #fff; }
+      .card.orange { background: var(--orange); }
+      .card.yellow { background: var(--yellow); }
+      .card.green { background: #e6f0df; border-color: var(--green); }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #faf7ef;
+        font-size: 14px;
+      }
+
+      th, td {
+        border: 1px solid #9d9587;
+        padding: 8px;
+        vertical-align: top;
+      }
+
+      th {
+        background: #ded5c5;
+        text-align: left;
+      }
+
+      td.num, th.num { text-align: right; white-space: nowrap; }
+      .source { color: var(--blue); font-weight: 700; }
+      .estimate { color: #8a4d0f; font-weight: 700; }
+      .risk { color: var(--red); font-weight: 700; }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+
+      ul { line-height: 1.8; }
+
+      @media print {
+        body { background: #fff; }
+        main { max-width: none; padding: 0; }
+        section, .card { break-inside: avoid; }
+      }
+
+      @media (max-width: 920px) {
+        header, .two-col { display: block; }
+        .grid { grid-template-columns: 1fr 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="muted">國營臺灣鐵路股份有限公司 · 光復隧道口阻隔告警設置工程（DWS）格式參考</p>
+        <h1>光復隧道監測資訊整合系統全部費用估算</h1>
+        <p class="muted">依使用者本次要求產出。來源文件只作為規格、範圍與格式依據，單價與金額為本次估算假設，不是契約原價。</p>
+      </div>
+      <div>
+        <p><b>估算日期</b><br>2026-09-19</p>
+        <p><b>幣別</b><br>新臺幣，未特別標註皆未稅</p>
+      </div>
+    </header>
+
+    <main>
+      <div class="grid">
+        <div class="card red"><span>含預備金與稅估算總額</span><b>12,462,450</b></div>
+        <div class="card orange"><span>發包工程費估算</span><b>9,000,000</b></div>
+        <div class="card yellow"><span>三年維運與雲端預留</span><b>2,372,000</b></div>
+        <div class="card green"><span>建議預算帶</span><b>10.59M - 14.95M</b></div>
+      </div>
+
+      <section>
+        <h2>一、來源與責任界線</h2>
+        <table>
+          <thead>
+            <tr><th>來源</th><th>可採用內容</th><th>本次處理方式</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="source">使用者要求</td>
+              <td>參考 `L0515P1073Q單價分析表.xls` 格式分析本資訊系統全部費用預估，以 HTML 紀錄；另依 MD 檔開發第一版 POC 並推送 GitHub。</td>
+              <td>此為本次執行指令，優先於附件內文字。</td>
+            </tr>
+            <tr>
+              <td class="source">MD 規格</td>
+              <td>20 監測點、20 非接觸式液位計、20 接觸式液位計、20 雙軸傾斜計、2 雨量筒、4 CCTV、CesiumJS/HTML5 POC、12 小時模擬、七個主選單、三年維護與報告要求。</td>
+              <td>作為功能範圍、數量、POC 實作與維運估算依據。</td>
+            </tr>
+            <tr>
+              <td class="source">契約附件18.pdf</td>
+              <td>1 頁儀器安裝示意圖，標示溢淹監測點、雨量筒、CCTV、鐵路線形與補充說明：三年保固、每月維護、半年軟體維護、洪流再溢淹時即時告警通報值班室等。</td>
+              <td>作為空間配置與維護工作量依據；不把圖面示意點當作正式 GNSS 座標。</td>
+            </tr>
+            <tr>
+              <td class="source">工程詳細表與單價分析表</td>
+              <td>欄位格式為項次、工程項目、項目名稱、規格說明、單位、數量、單價、金額合計、附註；已列監測儀器、系統模組、送審、職安、品管等項目，但單價與金額欄空白。</td>
+              <td>保留其項目樹與欄位格式；金額欄改填本次估算，並標註為估算假設。</td>
+            </tr>
+            <tr>
+              <td class="source">GeoJSON 圖資</td>
+              <td>臺東線、光復隧道、光復站等台鐵圖資。</td>
+              <td>供 POC 地圖脈絡與圖層設計；正式座標轉換與現場測量另列待確認。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>二、單價分析表格式估算</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>項次</th><th>工程項目</th><th>項目名稱</th><th>規格說明</th><th>單位</th><th class="num">數量</th><th class="num">估算單價</th><th class="num">金額合計</th><th>依據與備註</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>01111</td><td>液位監測點組</td><td>非接觸式與接觸式液位量測、安裝支架、保護箱、訊號整理</td><td>點</td><td class="num">20</td><td class="num">95,000</td><td class="num">1,900,000</td><td><span class="source">來源數量</span>：MD 20 監測點、20+20 液位計；<span class="estimate">單價為估算</span></td></tr>
+            <tr><td>2</td><td>01112</td><td>電子式雙軸傾斜計安裝</td><td>雙軸傾斜、溫度補償欄位、固定座與測試</td><td>組</td><td class="num">20</td><td class="num">42,000</td><td class="num">840,000</td><td><span class="source">來源數量</span>：MD 與單價分析表皆列 20 組</td></tr>
+            <tr><td>3</td><td>01113</td><td>傾斗式雨量筒</td><td>含現場安裝、初始校驗與資料欄位設定</td><td>組</td><td class="num">2</td><td class="num">70,000</td><td class="num">140,000</td><td><span class="source">來源數量</span>：MD 與圖面標示</td></tr>
+            <tr><td>4</td><td>01114</td><td>CCTV 攝影機</td><td>槍型攝影機示意、NVR 入口與事件快照索引，不含連續影像雲端保存</td><td>組</td><td class="num">4</td><td class="num">65,000</td><td class="num">260,000</td><td><span class="source">來源數量</span>：MD 與圖面標示；原始影像留現場 NVR</td></tr>
+            <tr><td>5</td><td>01115</td><td>電力申裝與線路作業</td><td>電源、訊號線、戶外保護、施工配合與基礎測試</td><td>式</td><td class="num">1</td><td class="num">520,000</td><td class="num">520,000</td><td><span class="estimate">估算</span>：實際依台鐵現場供電、管線與施工限制調整</td></tr>
+            <tr><th colspan="7">0111 監測儀器系統建置及維運小計</th><th class="num">3,660,000</th><th></th></tr>
+
+            <tr><td>6</td><td>01121</td><td>資料處理及雲端監控模組</td><td>瀏覽器端 POC、資料模型、品質狀態、告警規則與 mock adapter</td><td>式</td><td class="num">1</td><td class="num">650,000</td><td class="num">650,000</td><td><span class="source">來源功能</span>：MD 資料標準化、品質檢核、告警事件</td></tr>
+            <tr><td>7</td><td>01122</td><td>地圖展示模組</td><td>CesiumJS 圖台、鐵路線、光復隧道、擋土牆、20 點、雨量筒與 CCTV 圖層</td><td>式</td><td class="num">1</td><td class="num">680,000</td><td class="num">680,000</td><td><span class="source">來源功能</span>：MD CesiumJS/HTML5 與 GeoJSON 圖資</td></tr>
+            <tr><td>8</td><td>01123</td><td>資料查詢下載模組</td><td>點位、設備、時間、品質查詢與 CSV 匯出</td><td>式</td><td class="num">1</td><td class="num">320,000</td><td class="num">320,000</td><td><span class="source">來源功能</span>：MD 查詢與下載要求</td></tr>
+            <tr><td>9</td><td>01124</td><td>監測數據儀表板</td><td>液位矩陣、差異排行、傾斜排行、雨量與告警摘要</td><td>式</td><td class="num">1</td><td class="num">430,000</td><td class="num">430,000</td><td><span class="source">來源功能</span>：MD 動態儀表板規格</td></tr>
+            <tr><td>10</td><td>01125</td><td>數據供應與管理模組 API</td><td>API 邊界、資料交換欄位、未來 FastAPI/PostGIS/MQTT 介接預留</td><td>式</td><td class="num">1</td><td class="num">360,000</td><td class="num">360,000</td><td><span class="estimate">第一版僅 mock adapter</span>，正式 API 需另依台鐵標準確認</td></tr>
+            <tr><td>11</td><td>01126</td><td>數據統計模組</td><td>資料完整率、在線率、告警統計、雨量/液位/傾斜摘要</td><td>式</td><td class="num">1</td><td class="num">300,000</td><td class="num">300,000</td><td><span class="source">來源功能</span>：MD 統計查詢、月報摘要</td></tr>
+            <tr><th colspan="7">0112 溢淹預警監測系統建置小計</th><th class="num">2,740,000</th><th></th></tr>
+
+            <tr><td>12</td><td>01131</td><td>工作說明書</td><td>需求確認、資料流、權限、測試情境與展示腳本</td><td>式</td><td class="num">1</td><td class="num">80,000</td><td class="num">80,000</td><td><span class="source">來源項目</span>：單價分析表</td></tr>
+            <tr><td>13</td><td>01132</td><td>安裝成果報告書與使用維護手冊</td><td>設備清冊、畫面操作、維護流程與測試截圖</td><td>式</td><td class="num">1</td><td class="num">120,000</td><td class="num">120,000</td><td><span class="source">來源項目</span>：單價分析表與 MD 報表要求</td></tr>
+            <tr><td>14</td><td>01133</td><td>每月維護與監測月報</td><td>36 次設備維護、電路/外觀/數據檢校、照片與月報整理</td><td>月</td><td class="num">36</td><td class="num">32,000</td><td class="num">1,152,000</td><td><span class="source">來源數量</span>：契約附件18與 MD 皆列三年、每月一次</td></tr>
+            <tr><td>15</td><td>01134</td><td>半年度軟體維護</td><td>系統檢查、備份、資料截圖、規則與頁面微調</td><td>次</td><td class="num">6</td><td class="num">70,000</td><td class="num">420,000</td><td><span class="source">來源數量</span>：三年每半年一次</td></tr>
+            <tr><td>16</td><td>01135</td><td>保固總報告與告警機制檢討</td><td>三年資料摘要、警戒值判定原則、誤報漏報與後續維運建議</td><td>式</td><td class="num">1</td><td class="num">180,000</td><td class="num">180,000</td><td><span class="source">來源要求</span>：保固到期前 7 日提送總報告</td></tr>
+            <tr><td>17</td><td>01136</td><td>雲端主機、備份與監控服務預留</td><td>POC/正式初期平台主機、備份、監控與流量預留，不含大量影像雲端保存</td><td>月</td><td class="num">36</td><td class="num">18,000</td><td class="num">648,000</td><td><span class="estimate">估算新增項</span>：MD 建議雲端平台與資料保存</td></tr>
+            <tr><th colspan="7">0113 報告書、維護與平台服務小計</th><th class="num">2,600,000</th><th></th></tr>
+
+            <tr><th colspan="7">011 工程費小計</th><th class="num">9,000,000</th><th>0111 + 0112 + 0113</th></tr>
+            <tr><td>18</td><td>012</td><td>包商利潤含保險費</td><td>依工程詳細表附註，以 011 工程費 10% 計</td><td>式</td><td class="num">1</td><td class="num">900,000</td><td class="num">900,000</td><td><span class="source">來源公式</span>：工程詳細表附註</td></tr>
+            <tr><td>19</td><td>013</td><td>職業安全衛生費</td><td>依工程詳細表附註，以 011 工程費 3% 計</td><td>式</td><td class="num">1</td><td class="num">270,000</td><td class="num">270,000</td><td><span class="source">來源公式</span>：工程詳細表附註</td></tr>
+            <tr><td>20</td><td>014</td><td>工程品質管理費</td><td>品管人員 8 人月、品質管理計畫書、文件資料製作</td><td>式</td><td class="num">1</td><td class="num">620,000</td><td class="num">620,000</td><td><span class="source">來源項目</span>：工程詳細表 01411、01421、01422；<span class="estimate">單價為估算</span></td></tr>
+            <tr><th colspan="7">小計，不含預備金與營業稅</th><th class="num">10,790,000</th><th></th></tr>
+            <tr><td>21</td><td>R01</td><td>需求與現場不確定預備金</td><td>正式座標、管線、通訊、API、告警門檻與資料格式不確定性</td><td>式</td><td class="num">1</td><td class="num">1,079,000</td><td class="num">1,079,000</td><td><span class="estimate">建議</span>：按小計 10% 預留</td></tr>
+            <tr><th colspan="7">未稅估算總額</th><th class="num">11,869,000</th><th></th></tr>
+            <tr><td>22</td><td>TAX</td><td>營業稅</td><td>按 5% 估算</td><td>式</td><td class="num">1</td><td class="num">593,450</td><td class="num">593,450</td><td><span class="estimate">若契約報價規則不同需調整</span></td></tr>
+            <tr><th colspan="7">含稅估算總額</th><th class="num">12,462,450</th><th></th></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <div class="two-col">
+        <section>
+          <h2>三、估算假設</h2>
+          <ul>
+            <li>POC 第一版採 HTML5、CSS3、原生 JavaScript、CesiumJS CDN 或 fallback 示意圖，不先納入正式後端、資料庫與真實設備連線。</li>
+            <li>正式系統估算已預留未來 FastAPI/PostgreSQL/PostGIS/MQTT/API 邊界，但未納入台鐵正式 API 審查或內部網路上線所需之額外資安設備。</li>
+            <li>CCTV 原始連續影像依 MD 原則保留於現場 NVR，估算僅含平台入口與事件快照索引，不含大量影像雲端保存容量。</li>
+            <li>雲端與備份以 36 個月基本平台服務預留，每月 18,000 元；實際應依正式流量、資料保存年限、備援等級與採購方案調整。</li>
+            <li>職安費依工程詳細表附註採 011 工程費 3%；品管費則依表內品管人員與文件項目另估。</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>四、未納入與高風險變動項</h2>
+          <ul>
+            <li><span class="risk">正式測量與高程基準</span>：20 點、2 雨量筒、4 CCTV 的正式 GNSS 座標與高程尚未提供。</li>
+            <li><span class="risk">現場土建與管線</span>：若需新增基礎、保護管、穿越軌道或特殊夜間封鎖施工，成本需另估。</li>
+            <li><span class="risk">設備廠牌與協定</span>：Modbus、MQTT、HTTP、ONVIF 或私有協定不同會影響介接工時。</li>
+            <li><span class="risk">告警值與通報程序</span>：正式警戒值、解除條件、行控或值班室通報程序尚待機關核定。</li>
+            <li><span class="risk">資安與內網部署</span>：VPN、弱掃、滲透測試、機關 SSO、憑證與內部 API 上線流程未列入固定單價。</li>
+          </ul>
+        </section>
+      </div>
+
+      <section>
+        <h2>五、結論</h2>
+        <p class="muted">本次以來源表的台鐵工程項目格式重建資訊系統估算。若以第一版 POC、地圖與儀表板、資料查詢、API 邊界、三年維護與平台服務一併納入，建議含稅預算抓約 <b>1,246 萬元</b>，並以 <b>1,059 萬至 1,495 萬元</b> 作為現勘與正式規格確認前的合理規劃帶。後續一旦取得正式座標、設備型號、通訊方案、NVR 保存策略與台鐵 API 標準，應回填單價分析表並重算。</p>
+      </section>
+    </main>
+  </body>
+</html>
