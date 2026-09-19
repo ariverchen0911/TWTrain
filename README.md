@@ -6,12 +6,13 @@
 
 - `index.html`：可直接開啟的靜態展示頁。
 - `js/simulation-engine.js`：12 小時、每分鐘一筆的瀏覽器端模擬器。
-- `js/app.js`：地圖、儀表板、CCTV、查詢、統計、介接與設定頁面。
+- `js/app.js`：地圖、儀表板、CCTV、查詢、統計、介接與設定頁面，含 EMAP01 / ESRI / OSM 底圖切換與 2D/3D 圖台切換。
 - `docs/cost-estimate.html`：參考台鐵單價分析表格式完成的資訊系統全部費用估算。
+- `data/hualien-railway-layers.*`：由 `ref/geojson` 轉換出的花蓮區域台鐵鐵道設施 WGS84 疊圖資料。
 
 ## 展示方式
 
-直接開啟 `index.html` 即可操作。CesiumJS CDN 可用時會顯示 3D 圖台；若外部資源不可用，頁面會改用同一份狀態資料繪製 SVG 示意圖。
+建議以本機靜態伺服器預覽，例如在專案根目錄執行 `python -m http.server 8000` 後開啟 `http://127.0.0.1:8000/index.html`。CesiumJS CDN 可用時預設顯示光復隧道周邊 3D 圖台，並可切換 2D；若外部資源不可用，頁面會改用同一份狀態資料繪製 SVG 示意圖。
 
 ## 重要界線
 

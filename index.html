@@ -40,6 +40,7 @@
           <h2>圖層</h2>
           <label><input type="checkbox" checked data-layer="rail"> 臺東線鐵路</label>
           <label><input type="checkbox" checked data-layer="tunnel"> 光復隧道</label>
+          <label><input type="checkbox" checked data-layer="railFacilities"> 花蓮台鐵設施 GeoJSON</label>
           <label><input type="checkbox" checked data-layer="wall"> 擋土牆示意</label>
           <label><input type="checkbox" checked data-layer="points"> 溢淹監測點</label>
           <label><input type="checkbox" checked data-layer="rain"> 雨量筒</label>
@@ -75,6 +76,15 @@
           </div>
           <div class="timeline-panel">
             <div class="control-strip">
+              <label>底圖
+                <select id="basemapSelect"></select>
+              </label>
+              <label>圖台
+                <select id="sceneModeSelect">
+                  <option value="3d" selected>3D</option>
+                  <option value="2d">2D</option>
+                </select>
+              </label>
               <label>風險情境
                 <select id="scenarioSelect"></select>
               </label>
@@ -205,6 +215,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
     <script src="js/mock-data.js"></script>
+    <script src="data/hualien-railway-layers.js"></script>
     <script src="js/simulation-engine.js"></script>
     <script src="js/app.js"></script>
   </body>

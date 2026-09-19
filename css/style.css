@@ -758,3 +758,14 @@ pre {
     overflow: hidden;
   }
 }
+
+.cesium-viewer-bottom,
+.cesium-widget-credits,
+.cesium-credit-logoContainer,
+.cesium-credit-textContainer {
+  display: none !important;
+}
+
+.railway-overlay-point {
+  pointer-events: none;
+}

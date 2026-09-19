@@ -77,6 +77,11 @@
     monitoringPoints,
     rainGauges,
     cameras,
+    basemaps: [
+      ["emap01", "臺灣通用電子地圖(灰階)/EMAP01"],
+      ["esri", "ESRI 全球影像圖"],
+      ["osm", "OSM 電子地圖"]
+    ],
     scenarios: [
       ["normal", "正常監測"],
       ["rain", "降雨增加"],

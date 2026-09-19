@@ -4,7 +4,22 @@
   const levelClass = { L0: "l0", L1: "l1", L2: "l2", L3: "l3", OFFLINE: "off" };
   const levelLabel = { L0: "正常", L1: "注意", L2: "警戒", L3: "緊急", OFFLINE: "離線" };
   const cesiumEntities = new Map();
+  const layerGroups = { rail: [], tunnel: [], wall: [], points: [], rain: [], camera: [] };
+  const overlayStyles = {
+    railway_tracks: { color: "#111827", width: 3, pointSize: 7 },
+    railway_stations: { color: "#0284c7", width: 2, pointSize: 10 },
+    railway_milestones: { color: "#8a6f32", width: 1, pointSize: 5 },
+    railway_tunnels: { color: "#7c3aed", width: 4, pointSize: 7 },
+    railway_bridges: { color: "#2563eb", width: 3, pointSize: 7 },
+    railway_facilities: { color: "#0f766e", width: 2, pointSize: 6 },
+    guardrails: { color: "#a16207", width: 2, pointSize: 5 },
+    slopes_retaining_walls: { color: "#dc2626", width: 3, pointSize: 6 }
+  };
   let viewer = null;
+  let baseLayer = null;
+  let railFacilitiesDataSource = null;
+  let activeBasemap = "emap01";
+  let activeSceneMode = "3d";
   let activePointId = "OF-01";
 
   const $ = (selector) => document.querySelector(selector);
@@ -28,6 +43,7 @@
   }
 
   function fillControls() {
+    $("#basemapSelect").innerHTML = data.basemaps.map(([value, label]) => `<option value="${value}" ${value === activeBasemap ? "selected" : ""}>${label}</option>`).join("");
     $("#scenarioSelect").innerHTML = data.scenarios.map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
     $("#speedSelect").innerHTML = data.speedOptions.map(([value, label]) => `<option value="${value}" ${value === 10 ? "selected" : ""}>${label}</option>`).join("");
     $("#queryPoint").innerHTML = data.monitoringPoints.map((point) => `<option value="${point.code}">${point.code}</option>`).join("");
@@ -40,6 +56,12 @@
       switchView(button.dataset.target);
     });
     $("#menuToggle").addEventListener("click", () => document.body.classList.toggle("menu-open"));
+    $("#basemapSelect").addEventListener("change", (event) => setBasemap(event.target.value));
+    $("#sceneModeSelect").addEventListener("change", (event) => setSceneMode(event.target.value));
+    $("#layerPanel").addEventListener("change", (event) => {
+      const input = event.target.closest("input[data-layer]");
+      if (input) setLayerVisibility(input.dataset.layer, input.checked);
+    });
     $("#scenarioSelect").addEventListener("change", (event) => engine.setScenario(event.target.value));
     $("#speedSelect").addEventListener("change", (event) => engine.setSpeed(event.target.value));
     $("#playPause").addEventListener("click", () => engine.playing ? engine.pause() : engine.play());
@@ -77,7 +99,7 @@
     try {
       window.Cesium.Ion.defaultAccessToken = "";
       viewer = new window.Cesium.Viewer("cesiumContainer", {
-        imageryProvider: new window.Cesium.OpenStreetMapImageryProvider({ url: "https://tile.openstreetmap.org/" }),
+        imageryProvider: createImageryProvider(activeBasemap),
         terrainProvider: new window.Cesium.EllipsoidTerrainProvider(),
         animation: false,
         baseLayerPicker: false,
@@ -89,20 +111,20 @@
         selectionIndicator: false,
         timeline: false,
         navigationHelpButton: false,
-        sceneMode: window.Cesium.SceneMode.SCENE2D
+        sceneMode: window.Cesium.SceneMode.SCENE3D
       });
       viewer.scene.backgroundColor = window.Cesium.Color.fromCssColorString("#eef2ee");
       viewer.scene.globe.baseColor = window.Cesium.Color.fromCssColorString("#eef2ee");
       viewer.scene.globe.depthTestAgainstTerrain = false;
-      addPolyline("rail", data.tunnelLine, "#1f2937", 5);
-      addPolyline("oldTunnel", data.oldTunnelLine, "#7c6f57", 2);
-      addPolyline("wall", data.retainingWall, "#2563eb", 4);
+      baseLayer = viewer.imageryLayers.get(0);
+      addPolyline("rail", data.tunnelLine, "#1f2937", 5, "rail");
+      addPolyline("oldTunnel", data.oldTunnelLine, "#7c6f57", 2, "tunnel");
+      addPolyline("wall", data.retainingWall, "#2563eb", 4, "wall");
       data.monitoringPoints.forEach((point) => addPointEntity(point, "point"));
       data.rainGauges.forEach((point) => addPointEntity(point, "rain"));
       data.cameras.forEach((point) => addPointEntity(point, "camera"));
-      viewer.camera.setView({
-        destination: window.Cesium.Rectangle.fromDegrees(121.4088, 23.6792, 121.4192, 23.7012)
-      });
+      loadHualienRailwayLayers();
+      flyToGuangfu(false);
       viewer.screenSpaceEventHandler.setInputAction((movement) => {
         const picked = viewer.scene.pick(movement.position);
         if (picked && picked.id && picked.id.properties && picked.id.properties.pointCode) {
@@ -115,8 +137,132 @@
     }
   }
 
-  function addPolyline(id, coords, color, width) {
-    viewer.entities.add({
+
+  function createImageryProvider(key) {
+    if (key === "esri") {
+      return new window.Cesium.UrlTemplateImageryProvider({
+        url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        maximumLevel: 19,
+        credit: ""
+      });
+    }
+    if (key === "osm") {
+      return new window.Cesium.UrlTemplateImageryProvider({
+        url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        maximumLevel: 19,
+        credit: ""
+      });
+    }
+    return new window.Cesium.UrlTemplateImageryProvider({
+      url: "https://wmts.nlsc.gov.tw/wmts/EMAP01/default/GoogleMapsCompatible/{z}/{y}/{x}",
+      tilingScheme: new window.Cesium.WebMercatorTilingScheme(),
+      maximumLevel: 19,
+      credit: ""
+    });
+  }
+
+  function setBasemap(key) {
+    activeBasemap = key;
+    if (!viewer) return;
+    const provider = createImageryProvider(key);
+    if (baseLayer) viewer.imageryLayers.remove(baseLayer, false);
+    baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
+  }
+
+  function setSceneMode(mode) {
+    activeSceneMode = mode;
+    if (!viewer) return;
+    if (mode === "2d") viewer.scene.morphTo2D(0.4);
+    else viewer.scene.morphTo3D(0.4);
+    setTimeout(() => flyToGuangfu(true), 520);
+  }
+
+  function flyToGuangfu(animated) {
+    if (!viewer) return;
+    const duration = animated ? 0.65 : 0;
+    if (activeSceneMode === "2d") {
+      viewer.camera.flyTo({
+        destination: window.Cesium.Rectangle.fromDegrees(121.4078, 23.6786, 121.4203, 23.7018),
+        duration
+      });
+      return;
+    }
+    viewer.camera.flyTo({
+      destination: window.Cesium.Cartesian3.fromDegrees(121.413, 23.6926, 5200),
+      orientation: {
+        heading: window.Cesium.Math.toRadians(14),
+        pitch: window.Cesium.Math.toRadians(-55),
+        roll: 0
+      },
+      duration
+    });
+  }
+
+  function registerLayerEntity(layerKey, entity) {
+    if (!layerKey || !layerGroups[layerKey]) return;
+    layerGroups[layerKey].push(entity);
+  }
+
+  function setLayerVisibility(layerKey, visible) {
+    if (layerKey === "railFacilities") {
+      if (railFacilitiesDataSource) railFacilitiesDataSource.show = visible;
+      return;
+    }
+    (layerGroups[layerKey] || []).forEach((entity) => {
+      entity.show = visible;
+    });
+  }
+
+  async function loadHualienRailwayLayers() {
+    if (!window.GFTHualienRailwayLayers || !viewer) return;
+    document.documentElement.dataset.railOverlayStatus = "loading";
+    document.documentElement.dataset.railOverlayFeatures = String(window.GFTHualienRailwayLayers.features?.length || 0);
+    try {
+      const source = await window.Cesium.GeoJsonDataSource.load(window.GFTHualienRailwayLayers, { clampToGround: false });
+      source.name = "花蓮台鐵鐵道設施 GeoJSON";
+      viewer.dataSources.add(source);
+      railFacilitiesDataSource = source;
+      styleRailwayOverlay(source);
+      const checked = document.querySelector('[data-layer="railFacilities"]')?.checked ?? true;
+      setLayerVisibility("railFacilities", checked);
+      document.documentElement.dataset.railOverlayStatus = "loaded";
+      document.documentElement.dataset.railOverlayEntities = String(source.entities.values.length);
+    } catch (error) {
+      document.documentElement.dataset.railOverlayStatus = "error";
+      console.warn("Hualien railway GeoJSON overlay failed", error);
+    }
+  }
+
+  function styleRailwayOverlay(source) {
+    source.entities.values.forEach((entity) => {
+      const layer = entity.properties?.layer?.getValue?.() || "railway_facilities";
+      const style = overlayStyles[layer] || overlayStyles.railway_facilities;
+      const color = window.Cesium.Color.fromCssColorString(style.color);
+      if (entity.polyline) {
+        entity.polyline.material = color.withAlpha(0.88);
+        entity.polyline.width = style.width;
+        entity.polyline.clampToGround = false;
+      }
+      if (entity.polygon) {
+        entity.polygon.material = color.withAlpha(0.16);
+        entity.polygon.outline = true;
+        entity.polygon.outlineColor = color.withAlpha(0.9);
+      }
+      if (entity.point || entity.billboard || !entity.polyline && !entity.polygon) {
+        entity.billboard = undefined;
+        entity.point = new window.Cesium.PointGraphics({
+          pixelSize: style.pointSize,
+          color: color.withAlpha(0.85),
+          outlineColor: window.Cesium.Color.WHITE,
+          outlineWidth: 1
+        });
+      }
+      if (entity.label) entity.label.show = false;
+    });
+  }
+
+  function addPolyline(id, coords, color, width, layerKey) {
+    const entity = viewer.entities.add({
       id,
       polyline: {
         positions: coords.map(([lon, lat]) => window.Cesium.Cartesian3.fromDegrees(lon, lat, 0)),
@@ -124,6 +270,7 @@
         material: window.Cesium.Color.fromCssColorString(color)
       }
     });
+    registerLayerEntity(layerKey, entity);
   }
 
   function addPointEntity(point, kind) {
@@ -149,6 +296,7 @@
       properties: { pointCode: point.code, kind }
     });
     cesiumEntities.set(point.code, entity);
+    registerLayerEntity(kind === "point" ? "points" : kind, entity);
   }
 
   function render(state) {
@@ -156,6 +304,8 @@
     $("#currentTime").textContent = formatTime(state.time);
     $("#rightPanelTime").textContent = formatTime(state.time);
     $("#updateStatus").textContent = `${state.index} / ${state.steps - 1} 分鐘`;
+    $("#basemapSelect").value = activeBasemap;
+    $("#sceneModeSelect").value = activeSceneMode;
     $("#scenarioSelect").value = state.scenario;
     $("#speedSelect").value = String(state.speed);
     renderRiskCards(state);
