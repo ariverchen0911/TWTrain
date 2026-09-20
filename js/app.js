@@ -21,12 +21,17 @@
   let activeBasemap = "emap01";
   let activeSceneMode = "3d";
   let activePointId = "OF-01";
+  let selectedFeatureId = null;
+  let returningHome = false;
+  let terrainLoading = false;
 
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
   document.addEventListener("DOMContentLoaded", () => {
     buildNavigation();
+    $$('[data-version]').forEach((node) => node.textContent = `v${data.project.version}`);
+    document.documentElement.dataset.version = data.project.version;
     fillControls();
     bindEvents();
     initCesium();
@@ -58,6 +63,8 @@
     $("#menuToggle").addEventListener("click", () => document.body.classList.toggle("menu-open"));
     $("#basemapSelect").addEventListener("change", (event) => setBasemap(event.target.value));
     $("#sceneModeSelect").addEventListener("change", (event) => setSceneMode(event.target.value));
+    $("#homeExtent").addEventListener("click", () => flyToGuangfu(true));
+    $("#retryTerrain").addEventListener("click", loadTerrain);
     $("#layerPanel").addEventListener("change", (event) => {
       const input = event.target.closest("input[data-layer]");
       if (input) setLayerVisibility(input.dataset.layer, input.checked);
@@ -73,14 +80,19 @@
       render(engine.getState());
     });
     $("#queryQuality").addEventListener("change", () => render(engine.getState()));
+    ["#queryStart", "#queryEnd"].forEach((id) => $(id).addEventListener("change", () => renderQuery(engine.getState())));
     $("#exportCsv").addEventListener("click", downloadCsv);
-    $("#closeFeature").addEventListener("click", () => $("#featureCard").classList.remove("open"));
+    $("#closeFeature").addEventListener("click", closeFeature);
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeFeature(); });
     $("#applyThresholds").addEventListener("click", () => {
-      engine.setThresholds({
-        l1: Number($("#thresholdL1").value),
-        l2: Number($("#thresholdL2").value),
-        l3: Number($("#thresholdL3").value)
-      });
+      const inputs = ["#thresholdL1", "#thresholdL2", "#thresholdL3"].map($);
+      const [l1, l2, l3] = inputs.map((input) => input.value === "" ? NaN : Number(input.value));
+      try {
+        engine.setThresholds({ l1, l2, l3 });
+        $("#thresholdMessage").textContent = "已套用本次模擬門檻";
+      } catch (error) {
+        $("#thresholdMessage").textContent = error.message;
+      }
     });
   }
 
@@ -94,12 +106,14 @@
   function initCesium() {
     if (!window.Cesium) {
       document.body.classList.add("no-cesium");
+      $("#terrainStatus").textContent = "地圖服務無法載入，顯示點位示意圖";
+      ["#basemapSelect", "#sceneModeSelect", "#homeExtent"].forEach((id) => $(id).disabled = true);
       return;
     }
     try {
       window.Cesium.Ion.defaultAccessToken = "";
       viewer = new window.Cesium.Viewer("cesiumContainer", {
-        imageryProvider: createImageryProvider(activeBasemap),
+        baseLayer: new window.Cesium.ImageryLayer(createImageryProvider(activeBasemap)),
         terrainProvider: new window.Cesium.EllipsoidTerrainProvider(),
         animation: false,
         baseLayerPicker: false,
@@ -111,12 +125,30 @@
         selectionIndicator: false,
         timeline: false,
         navigationHelpButton: false,
-        sceneMode: window.Cesium.SceneMode.SCENE3D
+        sceneMode: window.Cesium.SceneMode.SCENE3D,
+        skyBox: false,
+        skyAtmosphere: false,
+        targetFrameRate: 30
       });
       viewer.scene.backgroundColor = window.Cesium.Color.fromCssColorString("#eef2ee");
       viewer.scene.globe.baseColor = window.Cesium.Color.fromCssColorString("#eef2ee");
       viewer.scene.globe.depthTestAgainstTerrain = false;
+      viewer.scene.globe.showGroundAtmosphere = false;
+      viewer.scene.globe.showWaterEffect = false;
+      viewer.scene.globe.enableLighting = true;
+      viewer.scene.light = new window.Cesium.DirectionalLight({
+        direction: window.Cesium.Cartesian3.normalize(new window.Cesium.Cartesian3(1, -1, -2), new window.Cesium.Cartesian3()),
+        intensity: 1.5
+      });
+      viewer.scene.fog.enabled = false;
+      viewer.scene.screenSpaceCameraController.minimumZoomDistance = 150;
+      viewer.scene.screenSpaceCameraController.maximumZoomDistance = 6000;
+      viewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
       baseLayer = viewer.imageryLayers.get(0);
+      document.documentElement.dataset.basemap = activeBasemap;
+      document.documentElement.dataset.sceneMode = activeSceneMode;
+      viewer.camera.moveEnd.addEventListener(enforceNorthExtent);
+      viewer.scene.morphComplete.addEventListener(() => flyToGuangfu(false));
       addPolyline("rail", data.tunnelLine, "#1f2937", 5, "rail");
       addPolyline("oldTunnel", data.oldTunnelLine, "#7c6f57", 2, "tunnel");
       addPolyline("wall", data.retainingWall, "#2563eb", 4, "wall");
@@ -125,6 +157,7 @@
       data.cameras.forEach((point) => addPointEntity(point, "camera"));
       loadHualienRailwayLayers();
       flyToGuangfu(false);
+      loadTerrain();
       viewer.screenSpaceEventHandler.setInputAction((movement) => {
         const picked = viewer.scene.pick(movement.position);
         if (picked && picked.id && picked.id.properties && picked.id.properties.pointCode) {
@@ -134,6 +167,40 @@
     } catch (error) {
       console.warn("Cesium fallback enabled", error);
       document.body.classList.add("no-cesium");
+      $("#terrainStatus").textContent = "3D 圖台無法載入，顯示點位示意圖";
+    }
+  }
+
+  async function loadTerrain() {
+    if (!viewer || terrainLoading) return;
+    terrainLoading = true;
+    $("#retryTerrain").hidden = true;
+    $("#terrainStatus").textContent = "全球 DEM 載入中";
+    document.documentElement.dataset.terrainStatus = "loading";
+    let timeout;
+    try {
+      const provider = await Promise.race([
+        window.Cesium.ArcGISTiledElevationTerrainProvider.fromUrl(data.map.terrainUrl),
+        new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error("DEM timeout")), 20000); })
+      ]);
+      clearTimeout(timeout);
+      viewer.terrainProvider = provider;
+      provider.errorEvent.addEventListener(() => {
+        document.documentElement.dataset.terrainStatus = "degraded";
+        $("#terrainStatus").textContent = "部分 DEM 圖磚無法載入";
+        $("#retryTerrain").hidden = false;
+      });
+      document.documentElement.dataset.terrainStatus = "ready";
+      $("#terrainStatus").textContent = "全球 DEM · Esri Terrain3D";
+      viewer.scene.requestRender();
+    } catch (error) {
+      document.documentElement.dataset.terrainStatus = "error";
+      $("#terrainStatus").textContent = "DEM 無法載入，目前為平面地形";
+      $("#retryTerrain").hidden = false;
+      console.warn("Global DEM unavailable", error);
+    } finally {
+      clearTimeout(timeout);
+      terrainLoading = false;
     }
   }
 
@@ -165,37 +232,55 @@
     activeBasemap = key;
     if (!viewer) return;
     const provider = createImageryProvider(key);
-    if (baseLayer) viewer.imageryLayers.remove(baseLayer, false);
+    if (baseLayer) viewer.imageryLayers.remove(baseLayer, true);
     baseLayer = viewer.imageryLayers.addImageryProvider(provider, 0);
+    document.documentElement.dataset.basemap = key;
+    viewer.scene.requestRender();
   }
 
   function setSceneMode(mode) {
     activeSceneMode = mode;
     if (!viewer) return;
-    if (mode === "2d") viewer.scene.morphTo2D(0.4);
-    else viewer.scene.morphTo3D(0.4);
-    setTimeout(() => flyToGuangfu(true), 520);
+    viewer.camera.cancelFlight();
+    viewer.scene.completeMorph();
+    if (mode === "2d") viewer.scene.morphTo2D(0);
+    else viewer.scene.morphTo3D(0);
+    flyToGuangfu(false);
+    document.documentElement.dataset.sceneMode = mode;
   }
 
   function flyToGuangfu(animated) {
     if (!viewer) return;
+    viewer.scene.completeMorph();
+    viewer.camera.cancelFlight();
+    returningHome = true;
     const duration = animated ? 0.65 : 0;
+    const finish = () => { returningHome = false; };
     if (activeSceneMode === "2d") {
       viewer.camera.flyTo({
-        destination: window.Cesium.Rectangle.fromDegrees(121.4078, 23.6786, 121.4203, 23.7018),
-        duration
+        destination: window.Cesium.Rectangle.fromDegrees(...data.map.homeBounds),
+        duration, complete: finish, cancel: finish
       });
       return;
     }
-    viewer.camera.flyTo({
-      destination: window.Cesium.Cartesian3.fromDegrees(121.413, 23.6926, 5200),
-      orientation: {
-        heading: window.Cesium.Math.toRadians(14),
-        pitch: window.Cesium.Math.toRadians(-55),
-        roll: 0
-      },
-      duration
+    const home = data.map.home;
+    const target = new window.Cesium.BoundingSphere(window.Cesium.Cartesian3.fromDegrees(home.lon, home.lat, home.height), 1);
+    viewer.camera.flyToBoundingSphere(target, {
+      offset: new window.Cesium.HeadingPitchRange(0, window.Cesium.Math.toRadians(-50), home.range),
+      duration, complete: finish, cancel: finish
     });
+  }
+
+  function enforceNorthExtent() {
+    if (!viewer || returningHome || viewer.scene.mode === window.Cesium.SceneMode.MORPHING) return;
+    const canvas = viewer.canvas;
+    const center = new window.Cesium.Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2);
+    const ray = viewer.camera.getPickRay(center);
+    const position = (ray && viewer.scene.globe.pick(ray, viewer.scene)) || viewer.camera.pickEllipsoid(center);
+    const bounds = window.Cesium.Rectangle.fromDegrees(...data.map.navigationBounds);
+    if (!position || !window.Cesium.Rectangle.contains(bounds, window.Cesium.Cartographic.fromCartesian(position))) {
+      flyToGuangfu(false);
+    }
   }
 
   function registerLayerEntity(layerKey, entity) {
@@ -206,11 +291,14 @@
   function setLayerVisibility(layerKey, visible) {
     if (layerKey === "railFacilities") {
       if (railFacilitiesDataSource) railFacilitiesDataSource.show = visible;
+      if (viewer) viewer.scene.requestRender();
       return;
     }
     (layerGroups[layerKey] || []).forEach((entity) => {
       entity.show = visible;
     });
+    if (viewer) viewer.scene.requestRender();
+    document.querySelectorAll(`#fallbackMap [data-layer="${layerKey}"]`).forEach((node) => { node.style.display = visible ? "" : "none"; });
   }
 
   async function loadHualienRailwayLayers() {
@@ -218,7 +306,9 @@
     document.documentElement.dataset.railOverlayStatus = "loading";
     document.documentElement.dataset.railOverlayFeatures = String(window.GFTHualienRailwayLayers.features?.length || 0);
     try {
-      const source = await window.Cesium.GeoJsonDataSource.load(window.GFTHualienRailwayLayers, { clampToGround: false });
+      // Limit terrain-clamped geometry to the locked navigation area.
+      const features = window.GFTHualienRailwayLayers.features.filter(intersectsNorthExtent);
+      const source = await window.Cesium.GeoJsonDataSource.load({ type: "FeatureCollection", features }, { clampToGround: true });
       source.name = "花蓮台鐵鐵道設施 GeoJSON";
       viewer.dataSources.add(source);
       railFacilitiesDataSource = source;
@@ -241,7 +331,7 @@
       if (entity.polyline) {
         entity.polyline.material = color.withAlpha(0.88);
         entity.polyline.width = style.width;
-        entity.polyline.clampToGround = false;
+        entity.polyline.clampToGround = true;
       }
       if (entity.polygon) {
         entity.polygon.material = color.withAlpha(0.16);
@@ -254,7 +344,8 @@
           pixelSize: style.pointSize,
           color: color.withAlpha(0.85),
           outlineColor: window.Cesium.Color.WHITE,
-          outlineWidth: 1
+          outlineWidth: 1,
+          heightReference: window.Cesium.HeightReference.CLAMP_TO_GROUND
         });
       }
       if (entity.label) entity.label.show = false;
@@ -267,6 +358,7 @@
       polyline: {
         positions: coords.map(([lon, lat]) => window.Cesium.Cartesian3.fromDegrees(lon, lat, 0)),
         width,
+        clampToGround: true,
         material: window.Cesium.Color.fromCssColorString(color)
       }
     });
@@ -274,22 +366,27 @@
   }
 
   function addPointEntity(point, kind) {
-    const showLabel = kind !== "point" || ["OF-01", "OF-05", "OF-10", "OF-15", "OF-20"].includes(point.code);
+    const labelDistance = point.code === "OF-01" ? Number.MAX_VALUE : 700;
     const entity = viewer.entities.add({
       id: point.code,
-      position: window.Cesium.Cartesian3.fromDegrees(point.lon, point.lat, 35),
+      position: window.Cesium.Cartesian3.fromDegrees(point.lon, point.lat, 0),
       point: {
         pixelSize: kind === "point" ? 12 : 14,
         color: kind === "camera" ? window.Cesium.Color.SKYBLUE : kind === "rain" ? window.Cesium.Color.ROYALBLUE : window.Cesium.Color.LIME,
         outlineColor: window.Cesium.Color.BLACK,
-        outlineWidth: 1
+        outlineWidth: 1,
+        heightReference: window.Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       label: {
         text: point.code,
+        heightReference: window.Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         font: "12px sans-serif",
         pixelOffset: new window.Cesium.Cartesian2(0, -22),
         fillColor: window.Cesium.Color.BLACK,
-        show: showLabel,
+        show: true,
+        distanceDisplayCondition: new window.Cesium.DistanceDisplayCondition(0, labelDistance),
         showBackground: true,
         backgroundColor: window.Cesium.Color.fromCssColorString("#f5f0e6")
       },
@@ -319,6 +416,8 @@
     renderQuery(state);
     renderStats(state);
     renderIntegration(state);
+    if (selectedFeatureId && !$("#featureCard").hidden) renderFeature(selectedFeatureId, state);
+    if (viewer) viewer.scene.requestRender();
   }
 
   function renderRiskCards(state) {
@@ -365,27 +464,30 @@
     const pointNodes = data.monitoringPoints.map((point) => {
       const [x, y] = project(point, bbox);
       const record = records.get(point.code);
-      return `<g class="map-point ${levelClass[record.alertLevel]}" data-point="${point.code}">
+      return `<g class="map-point ${levelClass[record.alertLevel]}" data-point="${point.code}" data-layer="points">
         <circle cx="${x}" cy="${y}" r="${record.alertLevel === "L3" ? 9 : 7}"></circle>
         <text x="${x + 9}" y="${y - 8}">${point.code}</text>
       </g>`;
     }).join("");
     const rainNodes = data.rainGauges.map((point) => {
       const [x, y] = project(point, bbox);
-      return `<rect class="rain-node" x="${x - 8}" y="${y - 8}" width="16" height="16"></rect><text x="${x + 11}" y="${y - 9}">${point.code}</text>`;
+      return `<g data-point="${point.code}" data-layer="rain"><rect class="rain-node" x="${x - 8}" y="${y - 8}" width="16" height="16"></rect><text x="${x + 11}" y="${y - 9}">${point.code}</text></g>`;
     }).join("");
     const cameraNodes = data.cameras.map((point) => {
       const [x, y] = project(point, bbox);
-      return `<path class="camera-node" d="M${x - 9},${y - 6} h18 v12 h-18z M${x + 9},${y - 3} l12,-7 v20 l-12,-7z"></path><text x="${x + 23}" y="${y - 8}">${point.code}</text>`;
+      return `<g data-point="${point.code}" data-layer="camera"><path class="camera-node" d="M${x - 9},${y - 6} h18 v12 h-18z M${x + 9},${y - 3} l12,-7 v20 l-12,-7z"></path><text x="${x + 23}" y="${y - 8}">${point.code}</text></g>`;
     }).join("");
     svg.innerHTML = `
       <rect class="map-bg" x="0" y="0" width="1000" height="520"></rect>
-      <polyline class="old-rail" points="${oldLine}"></polyline>
-      <polyline class="rail" points="${line}"></polyline>
-      <polyline class="wall" points="${wall}"></polyline>
+      <polyline class="old-rail" data-layer="tunnel" points="${oldLine}"></polyline>
+      <polyline class="rail" data-layer="rail" points="${line}"></polyline>
+      <polyline class="wall" data-layer="wall" points="${wall}"></polyline>
       ${pointNodes}${rainNodes}${cameraNodes}
     `;
     svg.querySelectorAll("[data-point]").forEach((node) => node.addEventListener("click", () => showFeature(node.dataset.point, state)));
+    $$('#layerPanel input[data-layer]').forEach((input) => {
+      svg.querySelectorAll(`[data-layer="${input.dataset.layer}"]`).forEach((node) => { node.style.display = input.checked ? "" : "none"; });
+    });
   }
 
   function updateCesiumEntities(state) {
@@ -472,7 +574,12 @@
   function renderQuery(state) {
     const pointId = $("#queryPoint").value || activePointId;
     const quality = $("#queryQuality").value;
-    const rows = engine.getHistory(pointId, 18).filter((record) => !quality || record.quality === quality).slice(-12).reverse();
+    const range = getQueryRange(state);
+    $("#exportCsv").disabled = !range;
+    const rows = range ? engine.getHistory(pointId, 720).filter((record, minute) => {
+      return minute >= range.start && minute <= range.end && (!quality || record.quality === quality);
+    }).reverse() : [];
+    $("#queryMessage").textContent = range ? `${rows.length} 筆 · ${range.start} 至 ${range.end} 分鐘` : "請輸入 0 至 720 的整數分鐘，且起始不得晚於目前時間或結束分鐘。";
     $("#queryTable").innerHTML = `
       <thead><tr><th>時間</th><th>點位</th><th>非接觸</th><th>接觸式</th><th>差異</th><th>傾斜</th><th>品質</th><th>告警</th></tr></thead>
       <tbody>${rows.map((record) => `
@@ -509,29 +616,80 @@
   }
 
   function showFeature(pointId, state) {
-    activePointId = pointId;
-    const record = state.records.find((item) => item.pointId === pointId);
-    if (!record) return;
-    $("#queryPoint").value = pointId;
+    selectedFeatureId = pointId;
+    if (state.records.some((record) => record.pointId === pointId)) {
+      activePointId = pointId;
+      $("#queryPoint").value = pointId;
+    }
+    $("#featureCard").hidden = false;
     $("#featureCard").classList.add("open");
-    $("#featureCard").innerHTML = `
-      <button id="closeFeature" type="button" aria-label="關閉">×</button>
+    renderFeature(pointId, state);
+  }
+
+  function intersectsNorthExtent(feature) {
+    const bounds = [Infinity, Infinity, -Infinity, -Infinity];
+    function visit(coordinates) {
+      if (!Array.isArray(coordinates)) return;
+      if (typeof coordinates[0] === "number") {
+        bounds[0] = Math.min(bounds[0], coordinates[0]);
+        bounds[1] = Math.min(bounds[1], coordinates[1]);
+        bounds[2] = Math.max(bounds[2], coordinates[0]);
+        bounds[3] = Math.max(bounds[3], coordinates[1]);
+      } else coordinates.forEach(visit);
+    }
+    function visitGeometry(geometry) {
+      if (!geometry) return;
+      if (geometry.type === "GeometryCollection") geometry.geometries.forEach(visitGeometry);
+      else visit(geometry.coordinates);
+    }
+    visitGeometry(feature.geometry);
+    const [west, south, east, north] = data.map.navigationBounds;
+    return bounds[0] <= east && bounds[2] >= west && bounds[1] <= north && bounds[3] >= south;
+  }
+
+  function closeFeature() {
+    $("#featureCard").hidden = true;
+    $("#featureCard").classList.remove("open");
+    selectedFeatureId = null;
+  }
+
+  function renderFeature(pointId, state) {
+    const record = state.records.find((item) => item.pointId === pointId);
+    if (!record) {
+      const device = [...state.rainGauges, ...state.cameras].find((item) => item.code === pointId);
+      if (!device) return;
+      $("#featureContent").innerHTML = `<h3>${device.code} ${device.name}</h3><p>${device.online ? "在線" : "離線"} · ${formatTime(state.time)}</p>` +
+        (pointId.startsWith("RG") ? `<p>1 分鐘雨量 ${device.rainfall1m} mm<br>累積雨量 ${device.accumulated} mm</p>` : `<p>${device.event} · 模擬影像狀態</p>`) +
+        `<small>座標來源 ${device.location_source} · ${device.lon}, ${device.lat}</small>`;
+      return;
+    }
+    $("#featureContent").innerHTML = `
       <h3>${record.pointId} ${levelLabel[record.alertLevel]}</h3>
       <dl>
         <div><dt>非接觸式液位</dt><dd>${record.levelNonContact.toFixed(2)} m</dd></div>
         <div><dt>接觸式液位</dt><dd>${record.levelContact.toFixed(2)} m</dd></div>
         <div><dt>液位差異</dt><dd>${record.levelDifference.toFixed(2)} m</dd></div>
         <div><dt>合成傾角</dt><dd>${record.tiltResultant.toFixed(3)} deg</dd></div>
+        <div><dt>1 分鐘雨量</dt><dd>${record.rainfall1m.toFixed(1)} mm</dd></div>
+        <div><dt>更新時間</dt><dd>${formatTime(state.time)}</dd></div>
         <div><dt>座標來源</dt><dd>${record.location_source}</dd></div>
       </dl>
       <p>${data.project.disclaimer}</p>
     `;
-    $("#closeFeature").addEventListener("click", () => $("#featureCard").classList.remove("open"));
     renderChart(state);
   }
 
+  function getQueryRange(state) {
+    const start = $("#queryStart").value === "" ? NaN : Number($("#queryStart").value);
+    const end = $("#queryEnd").value === "" ? state.index : Number($("#queryEnd").value);
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end > 720 || start > end || start > state.index) return null;
+    return { start, end: Math.min(end, state.index) };
+  }
+
   function downloadCsv() {
-    const csv = engine.exportCsv($("#queryPoint").value, $("#queryQuality").value);
+    const range = getQueryRange(engine.getState());
+    if (!range) return;
+    const csv = engine.exportCsv($("#queryPoint").value, $("#queryQuality").value, range.start, range.end);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

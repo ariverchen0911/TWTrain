@@ -14,6 +14,15 @@
       this.start = new Date("2026-09-18T06:00:00+08:00");
       this.steps = 721;
       this.timeline = this.buildTimeline();
+      this.rainSeries = {};
+      for (const [scenario, peak] of [["rain", 2.2], ["rapid_rise", 5.2]]) {
+        let total = 0;
+        this.rainSeries[scenario] = this.timeline.map((_, minute) => {
+          const rainfall = Math.max(0, Math.sin(Math.max(0, minute - 180) / 180)) * peak;
+          total += rainfall;
+          return { rainfall, total };
+        });
+      }
     }
 
     buildTimeline() {
@@ -43,10 +52,15 @@
         this.pause();
         this.play();
       }
+      this.emit();
     }
 
     setThresholds(thresholds) {
-      this.thresholds = { ...this.thresholds, ...thresholds };
+      const next = { ...this.thresholds, ...thresholds };
+      if (![next.l1, next.l2, next.l3].every(Number.isFinite) || next.l1 < 0 || next.l1 >= next.l2 || next.l2 >= next.l3) {
+        throw new Error("門檻必須為有效非負數，且 L1 < L2 < L3。");
+      }
+      this.thresholds = next;
       this.emit();
     }
 
@@ -90,8 +104,8 @@
       if (this.scenario === "rain" || this.scenario === "rapid_rise") {
         const rainStart = 180;
         const rainFactor = Math.max(0, Math.sin(Math.max(0, minute - rainStart) / 180));
-        rainfall = Math.max(0, rainFactor * (this.scenario === "rapid_rise" ? 5.2 : 2.2));
-        accumulated = Math.max(0, (minute - rainStart) * rainfall * 0.08);
+        rainfall = this.rainSeries[this.scenario][minute].rainfall;
+        accumulated = this.rainSeries[this.scenario][minute].total;
         baseLevel += rainFactor * (this.scenario === "rapid_rise" ? 1.15 : 0.48);
       }
 
@@ -185,8 +199,7 @@
           message: alertMessage(record),
           status: record.alertLevel === "OFFLINE" ? "待維護確認" : "待值班確認",
           timestamp: record.timestamp
-        }))
-        .slice(0, 8);
+        }));
     }
 
     getState() {
@@ -205,7 +218,7 @@
         rainGauges: this.getRainGauges(records),
         cameras: this.getCameras(records),
         alerts: this.getAlerts(records),
-        receivedCount: records.filter((record) => record.online).length * 3 + this.data.rainGauges.length + this.data.cameras.length,
+        receivedCount: records.filter((record) => record.online).length * 3 + this.getRainGauges(records).filter((gauge) => gauge.online).length + this.getCameras(records).filter((camera) => camera.online).length,
         expectedCount: records.length * 3 + this.data.rainGauges.length + this.data.cameras.length
       };
     }
@@ -220,10 +233,10 @@
       return history;
     }
 
-    exportCsv(pointId, quality = "") {
+    exportCsv(pointId, quality = "", start = 0, end = this.index) {
       const point = this.data.monitoringPoints.find((item) => item.code === pointId) || this.data.monitoringPoints[0];
       const rows = [["timestamp", "pointId", "levelNonContact", "levelContact", "levelDifference", "tiltX", "tiltY", "rainfall1m", "quality", "alertLevel"]];
-      for (let i = 0; i <= this.index; i += 1) {
+      for (let i = Math.max(0, start); i <= Math.min(this.index, end); i += 1) {
         const record = this.pointRecord(point, i);
         if (quality && record.quality !== quality) continue;
         rows.push([record.timestamp, record.pointId, record.levelNonContact, record.levelContact, record.levelDifference, record.tiltX, record.tiltY, record.rainfall1m, record.quality, record.alertLevel]);

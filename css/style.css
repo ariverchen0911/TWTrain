@@ -105,7 +105,7 @@ button {
   height: calc(100vh - 108px);
   min-height: 660px;
   display: grid;
-  grid-template-columns: 56px 300px minmax(620px, 1fr) 336px;
+  grid-template-columns: 56px 260px minmax(0, 1fr) 290px;
   border-bottom: 2px solid var(--line);
 }
 
@@ -239,7 +239,11 @@ button {
 
 #fallbackMap {
   display: none;
+  width: 100%;
+  height: 100%;
 }
+
+#fallbackMap text { pointer-events: none; }
 
 .no-cesium #cesiumContainer {
   display: none;
@@ -313,18 +317,44 @@ button {
 
 .feature-card {
   position: absolute;
-  top: 18px;
+  top: 58px;
   right: 18px;
   width: 310px;
   background: var(--panel);
   border: 2px solid var(--line);
   padding: 14px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  max-height: calc(100% - 130px);
+  overflow: auto;
+  max-width: calc(100% - 36px);
+  z-index: 3;
 }
 
 .feature-card:not(.open) {
-  opacity: 0.95;
+  display: none;
 }
+
+[hidden] { display: none !important; }
+.map-tools { position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; align-items: center; gap: 8px; }
+.map-tools button { width: 38px; height: 38px; padding: 0; font-size: 25px; background: #fff; }
+.map-tools span { background: #ffffffed; padding: 4px 8px; font-size: 13px; }
+.map-notice { max-width: calc(100% - 24px); pointer-events: none; z-index: 2; }
+.map-notice button { pointer-events: auto; min-height: 24px; padding: 0 6px; margin-left: 8px; }
+.view[data-view="map"].active { display: flex; flex-direction: column; }
+.map-frame { flex: 1; height: auto; min-height: 360px; }
+.timeline-panel { flex: 0 0 auto; }
+.control-strip select { max-width: 100%; }
+.control-strip label { min-width: 0; max-width: 100%; }
+#basemapSelect { width: 260px; }
+.control-strip button { flex-shrink: 0; }
+.risk-timeline button { padding: 0; }
+.content-grid, .module { min-width: 0; }
+#trendChart { width: 100%; height: auto; }
+.form-row input { width: 115px; max-width: 100%; }
+.form-row label { flex-wrap: wrap; }
+.map-point circle { fill: var(--level-color); }
+.statusbar { grid-template-columns: auto auto 1fr auto; }
+.statusbar a { overflow-wrap: anywhere; }
 
 .feature-card button {
   float: right;
@@ -386,12 +416,12 @@ dl div {
   border-top: 1px solid var(--line);
   display: flex;
   align-items: flex-end;
-  gap: 3px;
+  gap: 2px;
 }
 
 .risk-timeline button {
   flex: 1;
-  min-width: 3px;
+  min-width: 1px;
   min-height: 10px;
   border: 0;
   opacity: 0.48;
@@ -670,7 +700,7 @@ pre {
 
 @media (max-width: 1260px) {
   .app-shell {
-    grid-template-columns: 54px 260px minmax(500px, 1fr);
+    grid-template-columns: 54px 220px minmax(0, 1fr);
   }
 
   .risk-panel {
@@ -678,7 +708,7 @@ pre {
   }
 
   .point-matrix {
-    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 }
 
@@ -720,6 +750,7 @@ pre {
   .layer-panel {
     left: 70px;
     width: 260px;
+    transform: translateX(calc(-100% - 70px));
   }
 
   .menu-open .icon-rail,
@@ -750,6 +781,9 @@ pre {
     left: 12px;
     right: 12px;
     width: auto;
+    top: auto;
+    bottom: 72px;
+    max-height: calc(100% - 122px);
   }
 
   .statusbar {
@@ -757,6 +791,24 @@ pre {
     height: 40px;
     overflow: hidden;
   }
+}
+
+@media (min-width: 861px) and (max-width: 1500px) {
+  .content-grid { grid-template-columns: minmax(0, 1fr); }
+  .point-matrix { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .app-shell { grid-template-columns: minmax(0, 1fr); height: auto; min-height: calc(100dvh - 94px); }
+  .view { height: auto; min-height: calc(100dvh - 94px); }
+  .map-frame { flex: none; height: 60dvh; }
+  .view[data-view="map"] { overflow: visible; }
+  .statusbar { height: auto; min-height: 56px; gap: 6px; padding: 6px 12px; }
+  .layer-panel { max-width: calc(100vw - 70px); }
+  .content-grid { grid-template-columns: minmax(0, 1fr); }
+  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .control-strip { gap: 6px; }
+  #currentTime { font-size: 16px; }
 }
 
 .cesium-viewer-bottom,

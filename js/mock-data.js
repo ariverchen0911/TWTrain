@@ -68,8 +68,15 @@
   window.GFTData = {
     project: {
       code: "GFT",
+      version: "1.2.0",
       title: "花蓮縣光復隧道科技監測資訊整合系統",
       disclaimer: "POC 示意資料，非正式監測成果"
+    },
+    map: {
+      home: { lon: 121.4103, lat: 23.6993, height: 230, range: 2200 },
+      homeBounds: [121.403, 23.695, 121.418, 23.709],
+      navigationBounds: [121.395, 23.689, 121.427, 23.719],
+      terrainUrl: "https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer"
     },
     tunnelLine,
     oldTunnelLine,

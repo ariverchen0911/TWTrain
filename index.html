@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>光復隧道溢淹預警監測 POC</title>
+    <title>光復隧道溢淹預警監測 POC v1.2.0</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.119.0/Build/Cesium/Widgets/widgets.css">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=1.2.0">
   </head>
   <body>
     <header class="topbar">
@@ -14,12 +14,12 @@
         <div>
           <p class="agency">國營臺灣鐵路股份有限公司</p>
           <h1>光復隧道溢淹預警監測圖台</h1>
-          <p class="subtitle">北口擋土牆與軌道周邊設施 · 第一版 HTML5 POC</p>
+          <p class="subtitle">北口擋土牆與軌道周邊設施 · POC <span data-version>v1.2.0</span></p>
         </div>
       </div>
       <div class="top-actions">
         <span>圖號 GFT-POC-01</span>
-        <select aria-label="使用者角色">
+        <select aria-label="使用者角色（POC 尚未啟用權限）" disabled title="POC 尚未啟用登入權限">
           <option>值班員 · 系統管理者</option>
           <option>維護人員</option>
           <option>查詢人員</option>
@@ -29,7 +29,7 @@
 
     <div class="mobile-toggle">
       <button id="menuToggle" type="button">選單</button>
-      <strong>光復隧道監測 POC</strong>
+      <strong>光復隧道監測 <span data-version>v1.2.0</span></strong>
     </div>
 
     <div class="app-shell">
@@ -67,11 +67,14 @@
           <div class="map-frame">
             <div id="cesiumContainer"></div>
             <svg id="fallbackMap" viewBox="0 0 1000 520" role="img" aria-label="光復隧道監測點示意圖"></svg>
-            <div class="map-notice">POC 示意位置，正式座標待現場測量確認</div>
-            <article class="feature-card" id="featureCard">
-              <button id="closeFeature" type="button" aria-label="關閉">×</button>
-              <h3>光復隧道北口</h3>
-              <p>點選監測點查看目前液位、傾斜、雨量與告警狀態。</p>
+            <div class="map-tools">
+              <button id="homeExtent" type="button" title="回到光復隧道北口初始範圍" aria-label="回到光復隧道北口初始範圍">⌖</button>
+              <span>光復隧道北向區域</span>
+            </div>
+            <div class="map-notice"><span id="terrainStatus" role="status">全球 DEM 載入中</span><button id="retryTerrain" type="button" hidden title="重試地形載入" aria-label="重試地形載入">↻</button><br>POC 示意位置，正式座標待現場測量確認</div>
+            <article class="feature-card open" id="featureCard" aria-label="設施資訊">
+              <button id="closeFeature" type="button" aria-label="關閉設施資訊" title="關閉">×</button>
+              <div id="featureContent"><h3>光復隧道北口</h3><p>北口擋土牆與軌道周邊設施</p><small>20 個監測點 · 2 組雨量筒 · 4 組 CCTV</small></div>
             </article>
           </div>
           <div class="timeline-panel">
@@ -128,9 +131,12 @@
             <h2>資料查詢</h2>
             <div class="form-row">
               <label>監測點 <select id="queryPoint"></select></label>
+              <label>起始分鐘 <input id="queryStart" type="number" min="0" max="720" step="1" value="0"></label>
+              <label>結束分鐘 <input id="queryEnd" type="number" min="0" max="720" step="1" placeholder="目前時間"></label>
               <label>資料品質 <select id="queryQuality"><option value="">全部</option><option>GOOD</option><option>SUSPECT</option><option>OFFLINE</option></select></label>
               <button id="exportCsv" type="button">下載 CSV</button>
             </div>
+            <p id="queryMessage" role="status"></p>
             <div class="table-wrap">
               <table id="queryTable"></table>
             </div>
@@ -182,6 +188,7 @@
               <button id="applyThresholds" type="button">套用</button>
             </div>
             <p>門檻值為 POC 展示參數，正式值需依現場高程、試運轉與機關核定調整。</p>
+            <p id="thresholdMessage" role="status"></p>
           </article>
         </section>
       </main>
@@ -207,16 +214,16 @@
     </div>
 
     <footer class="statusbar">
-      <span>颱風資料時間 <b>示意</b></span>
+      <span>POC <b data-version>v1.2.0</b></span>
       <span>更新狀態 <b id="updateStatus">模擬持續時間</b></span>
-      <span>比例尺 <b>示意縮放</b></span>
+      <a href="docs/version-history.html">版本與完整性檢視</a>
       <a href="docs/cost-estimate.html">費用估算 HTML</a>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
-    <script src="js/mock-data.js"></script>
+    <script src="js/mock-data.js?v=1.2.0"></script>
     <script src="data/hualien-railway-layers.js"></script>
-    <script src="js/simulation-engine.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/simulation-engine.js?v=1.2.0"></script>
+    <script src="js/app.js?v=1.2.0"></script>
   </body>
 </html>

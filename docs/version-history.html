@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>光復隧道 POC v1.2.0 版更與完整性檢視</title>
+<style>
+:root{font-family:"Microsoft JhengHei",sans-serif;color:#202623;background:#f5f7f6;font-size:16px;line-height:1.7}*{box-sizing:border-box}body{margin:0}main{max-width:1100px;margin:auto;padding:32px 24px}h1{font-size:28px;line-height:1.4}h2{font-size:21px;border-bottom:2px solid #386956;padding-bottom:8px;margin-top:32px}a{color:#1f6653}table{border-collapse:collapse;width:100%;background:white;margin:16px 0}th,td{padding:10px 12px;text-align:left;border:1px solid #cad2ce;vertical-align:top}th{background:#e5eeea}.table-wrap{overflow:auto}.status{font-weight:bold;color:#1f6653}.pending{color:#8b510c}code{overflow-wrap:anywhere}nav{display:flex;gap:20px;flex-wrap:wrap}.meta{color:#52625a}.note{border-left:4px solid #457b68;padding:8px 16px;background:#eef3f0}@media(max-width:600px){main{padding:20px 14px}h1{font-size:24px}th,td{min-width:120px}}@media print{nav{display:none}main{max-width:none;padding:0}body{background:#fff}h2{break-after:avoid}tr{break-inside:avoid}a{color:inherit;text-decoration:none}@page{size:A4;margin:15mm}}
+</style>
+</head>
+<body><main>
+<nav><a href="../index.html">返回監測圖台</a><a href="cost-estimate.html">費用估算</a></nav>
+<h1>光復隧道監測 POC<br>v1.2.0 版更與完整性檢視</h1>
+<p class="meta">更新日期：2026-09-20｜適用：第一階段靜態 HTML5 / CesiumJS POC</p>
+<p class="note">本次依使用者六項更新需求與規劃 MD 第 14 節靜態 POC 規格進行檢視。下列「完成」係指瀏覽器端示範及本次驗證範圍，不代表正式監測系統驗收。</p>
+<h2>版本紀錄</h2>
+<div class="table-wrap"><table><thead><tr><th>版本</th><th>內容</th><th>追溯</th></tr></thead><tbody>
+<tr><td>v1.2.0<br>2026-09-20</td><td>北向範圍限制、直接載入 EMAP01、全球 DEM 貼地、返回北口定位、資訊面板關閉與同步修復、RWD、查詢匯出一致性及模擬資料修正。</td><td>頁面、套件、README 與本紀錄一致標註版本。</td></tr>
+<tr><td>前次底圖與圖層更新<br>當時未標版號</td><td>EMAP01 / ESRI / OSM 選項、花蓮台鐵 8,087 筆 GeoJSON、2D / 3D 切換。</td><td><a href="https://github.com/ariverchen0911/TWTrain/commit/73e02c6">73e02c6</a></td></tr>
+<tr><td>初版 POC<br>當時未標版號</td><td>七個功能頁面、20 點模擬監測、費用估算 HTML。</td><td><a href="https://github.com/ariverchen0911/TWTrain/commit/1303209">1303209</a></td></tr>
+</tbody></table></div>
+<h2>本次六項更新</h2>
+<ol>
+<li><b>北向區域：</b>以北口規劃座標 121.4103°E、23.6993°N 為 3D 初始目標，朝北、俯角 50°、觀測距離 2,200 公尺。2D 初始範圍為 121.403～121.418°E、23.695～23.709°N。</li>
+<li><b>直接顯示 EMAP01：</b>改用 Cesium 1.119 的 <code>baseLayer</code> 建立唯一底圖；移除藍色天空、大氣霧化與水面效果。ESRI 全球影像與 OSM 可切換。</li>
+<li><b>全球 DEM：</b>接入 Esri WorldElevation3D / Terrain3D，地形採實際高程；鐵道線、設施、監測點與標籤貼地顯示。使用固定日光呈現，並非即時日照模擬。提供地形載入失敗與重試狀態。</li>
+<li><b>右上資訊面板：</b>以實際隱藏狀態關閉，保留固定關閉按鈕；更新內容不再替換按鈕。支援 Escape，且關閉後不會因模擬更新自行重開。</li>
+<li><b>完整性與版次：</b>新增此版更紀錄與可重跑測試；修正明細同步、查詢匯出範圍、門檻驗證、累積雨量、離線設備接收率及告警總數。</li>
+<li><b>返回初始範圍：</b>地圖左上定位按鈕可恢復北口初始位置與視角；2D / 3D 各有對應範圍。</li>
+</ol>
+<p>區內仍可平移、縮放與旋轉。操作結束時若畫面中心超出 121.395～121.427°E、23.689～23.719°N，會回到初始範圍；縮放距離限制為 150～6,000 公尺。此為 POC 導航範圍，不是契約用地或工程界址。</p>
+<h2>完整性矩陣</h2>
+<div class="table-wrap"><table><thead><tr><th>模組</th><th>本版內容</th><th>仍待補足</th></tr></thead><tbody>
+<tr><td>GIS 圖台</td><td class="status">EMAP01 / ESRI / OSM、全球 DEM、北口定位、2D / 3D、圖層開關及監測資訊。保留 8,087 筆來源，依導航範圍繪製包絡範圍相交的 141 筆設施。</td><td>正式測量座標、高程基準、設備清冊與工程圖說套準；更多 GIS 篩選、範圍匯出與設施屬性查詢。</td></tr>
+<tr><td>儀表板</td><td class="status">20 點液位矩陣、60 分鐘液位 / 雨量趨勢、告警與狀態連動。</td><td>獨立雨量雙站卡片、傾斜趨勢與完整時間篩選；正式閾值及持續時間 / 解除規則。</td></tr>
+<tr><td>CCTV</td><td class="status">4 組模擬快照狀態與在線資訊；點選地圖攝影機可看狀態。</td><td>真實影像、NVR / ONVIF、事件快照及影像權限；本版預覽方格為示意。</td></tr>
+<tr><td>資料查詢</td><td class="status">監測點、分鐘區間、品質篩選及同條件 CSV 匯出。</td><td>跨日資料、指定設備 / 項目、JSON / Excel、正式資料庫查詢。</td></tr>
+<tr><td>統計查詢</td><td class="status">液位差與傾斜排行、當下資料接收率、告警數及模擬累積雨量。</td><td>月報、保固總報告、跨時段在線率與設備品質稽核。</td></tr>
+<tr><td>介接監測</td><td class="pending">瀏覽器模擬閘道、API 邊界及 NVR 待接資訊。</td><td>FastAPI、PostgreSQL / PostGIS、MQTT、WebSocket、真實設備與台鐵 API。</td></tr>
+<tr><td>系統設定</td><td class="status">可調示意 L1 / L2 / L3 並驗證順序；情境與速度在圖台操作。</td><td>帳號角色 / 稽核、逐點門檻、設定保存、可調起始日期及告警確認 / 處置 / 結案。</td></tr>
+<tr><td>版面與降級</td><td class="status">桌面、平板、手機七頁；資訊面板關閉；Cesium 中斷改為示意圖；DEM 中斷可重試。</td><td>CDN 與底圖 / DEM 仍需網路；離線完整地圖包未建置。</td></tr>
+</tbody></table></div>
+<h2>驗證紀錄</h2>
+<p id="qa-status" class="status">2026-09-20 驗證完成：6 項模擬回歸測試通過；瀏覽器圖台、查詢匯出、門檻、七頁跨裝置及中斷恢復檢查通過，未捕捉到未處理的 JavaScript 執行錯誤。</p>
+<ul>
+<li>桌面 1600 × 1000、平板 1024 × 768、手機 390 × 844：七頁均無整頁水平溢出；時間軸未裁切、收合抽屜完全移出畫面。</li>
+<li>初始圖台為 3D，僅有一個 EMAP01 底圖；EMAP01 與 DEM 圖磚取得 HTTP 200。底圖與 2D / 3D 切換、區域外返回及定位按鈕均通過。</li>
+<li>DEM 四點抽樣高程約為 337.5、153.7、141.4、435.7 公尺，具有實際地形差異。高程只用於展示驗證，非現場測量成果。</li>
+<li>資訊面板初始關閉、三次重開與關閉、更新時間同步、示意圖點選與關閉均通過。</li>
+<li>六種情境共檢查 721 個時間點；資料與告警數量一致。OF-08 第 330 至 360 分鐘的 CSV 含 31 筆資料，與查詢條件一致。</li>
+<li>桌面 / 平板 / 手機已擷取截圖並檢視；地圖區域像素檢查非空白。手機 3D、手機 2D、平板 3D 分別具有 377、39、331 個量化色彩區間。</li>
+<li>模擬 Cesium CDN 中斷可顯示點位示意圖；模擬 DEM 中斷可顯示錯誤並在恢復後重試成功。</li>
+</ul>
+<p>可重跑：<code>npm test</code>（模擬資料）；啟動本機網站後執行 <code>npm run test:browser</code>（Chromium 圖台與七頁操作）。瀏覽器測試產出 JSON、CSV 與桌面 / 平板 / 手機截圖，位於 <code>outputs/qa/v1.2.0/</code>。</p>
+<h2>資料來源與使用界線</h2>
+<ul>
+<li>需求依據：<code>ref/光復隧道監測資訊整合系統_細部規劃設計與POC開發規格.md</code>。本次使用者更新需求優先於該文件舊版地形設定。</li>
+<li>台鐵 GeoJSON：既有 <code>data/hualien-railway-layers.geojson</code>，由來源 EPSG:3826 轉為 EPSG:4326；本次未修改原始設施資料。</li>
+<li>底圖：<a href="https://maps.nlsc.gov.tw/">內政部國土測繪中心 EMAP01</a>、<a href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer">Esri World Imagery</a>、<a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>。</li>
+<li>地形：<a href="https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer">Esri WorldElevation3D / Terrain3D</a>。技術實作參考 <a href="https://cesium.com/learn/cesiumjs/ref-doc/ArcGISTiledElevationTerrainProvider.html">Cesium ArcGISTiledElevationTerrainProvider</a> 與 <a href="https://cesium.com/learn/cesiumjs/ref-doc/Viewer.html">Viewer 官方文件</a>。</li>
+</ul>
+<p>監測點與所有量測仍為 <code>PLAN</code> / 模擬資料。全球 DEM 僅用於地形視覺化，不能取代現場測量或直接作為水位警戒基準。費用估算沿用原文件，本次未重新估價。</p>
+</main></body></html>
