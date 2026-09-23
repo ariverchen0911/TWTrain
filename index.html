@@ -3,33 +3,58 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>光復隧道溢淹預警監測 POC v1.2.0</title>
+    <title>光復隧道溢淹預警監測 POC v1.3.0</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.119.0/Build/Cesium/Widgets/widgets.css">
-    <link rel="stylesheet" href="css/style.css?v=1.2.0">
+    <link rel="stylesheet" href="css/style.css?v=1.3.0">
   </head>
-  <body>
+  <body class="auth-required">
+    <main class="login-screen" id="loginScreen" aria-labelledby="loginTitle">
+      <section class="login-panel">
+        <div class="login-brand"><div class="brand-mark">TRA</div><div><p class="agency">國營臺灣鐵路股份有限公司</p><p class="login-product">光復隧道監測資訊整合系統</p></div></div>
+        <h1 id="loginTitle">登入系統</h1>
+        <p class="login-subtitle">北口擋土牆與軌道周邊設施 · POC <span data-version>v1.3.0</span></p>
+        <form id="loginForm" novalidate>
+          <label for="loginUsername">帳號</label>
+          <input id="loginUsername" name="username" type="text" value="geoinfor" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+          <label for="loginPassword">密碼</label>
+          <input id="loginPassword" name="password" type="password" autocomplete="current-password" required>
+          <p class="demo-credentials">示範帳密：geoinfor / 84234755</p>
+          <label for="captchaInput">動態驗證碼</label>
+          <div class="captcha-row">
+            <canvas id="captchaCanvas" width="320" height="88" role="img" aria-label="四位數動態驗證碼"></canvas>
+            <button id="refreshCaptcha" class="captcha-refresh" type="button" title="更新驗證碼" aria-label="更新驗證碼">↻</button>
+          </div>
+          <input id="captchaInput" name="captcha" type="text" inputmode="numeric" autocomplete="off" pattern="[0-9]{4}" maxlength="4" placeholder="輸入圖中的 4 碼" required>
+          <p id="loginMessage" class="login-message" role="alert" aria-live="polite"></p>
+          <button class="login-submit" id="loginSubmit" type="submit">登入</button>
+        </form>
+        <p class="login-scope">靜態 POC 示範登入；正式帳號驗證須由伺服器執行。</p>
+      </section>
+    </main>
     <header class="topbar">
       <div class="brand-block">
         <div class="brand-mark">TRA</div>
         <div>
           <p class="agency">國營臺灣鐵路股份有限公司</p>
           <h1>光復隧道溢淹預警監測圖台</h1>
-          <p class="subtitle">北口擋土牆與軌道周邊設施 · POC <span data-version>v1.2.0</span></p>
+          <p class="subtitle">北口擋土牆與軌道周邊設施 · POC <span data-version>v1.3.0</span></p>
         </div>
       </div>
       <div class="top-actions">
         <span>圖號 GFT-POC-01</span>
-        <select aria-label="使用者角色（POC 尚未啟用權限）" disabled title="POC 尚未啟用登入權限">
+        <select aria-label="使用者角色（POC 示意，尚未啟用角色權限）" disabled title="POC 尚未啟用角色權限">
           <option>值班員 · 系統管理者</option>
           <option>維護人員</option>
           <option>查詢人員</option>
         </select>
+        <button id="logoutButton" type="button" title="登出系統">登出</button>
       </div>
     </header>
 
     <div class="mobile-toggle">
       <button id="menuToggle" type="button">選單</button>
-      <strong>光復隧道監測 <span data-version>v1.2.0</span></strong>
+      <strong>光復隧道監測 <span data-version>v1.3.0</span></strong>
+      <button id="mobileLogoutButton" type="button">登出</button>
     </div>
 
     <div class="app-shell">
@@ -214,16 +239,16 @@
     </div>
 
     <footer class="statusbar">
-      <span>POC <b data-version>v1.2.0</b></span>
+      <span>POC <b data-version>v1.3.0</b></span>
       <span>更新狀態 <b id="updateStatus">模擬持續時間</b></span>
       <a href="docs/version-history.html">版本與完整性檢視</a>
       <a href="docs/cost-estimate.html">費用估算 HTML</a>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/cesium@1.119.0/Build/Cesium/Cesium.js"></script>
-    <script src="js/mock-data.js?v=1.2.0"></script>
+    <script src="js/mock-data.js?v=1.3.0"></script>
     <script src="data/hualien-railway-layers.js"></script>
-    <script src="js/simulation-engine.js?v=1.2.0"></script>
-    <script src="js/app.js?v=1.2.0"></script>
+    <script src="js/simulation-engine.js?v=1.3.0"></script>
+    <script src="js/app.js?v=1.3.0"></script>
   </body>
 </html>

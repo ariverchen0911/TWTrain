@@ -17,6 +17,49 @@
   box-sizing: border-box;
 }
 
+.auth-required > .topbar,
+.auth-required > .mobile-toggle,
+.auth-required > .app-shell,
+.auth-required > .statusbar { display: none !important; }
+
+.login-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #edf1ee;
+}
+.login-panel {
+  width: min(440px, 100%);
+  padding: 30px;
+  background: #fff;
+  border: 1px solid #b8c3bd;
+  border-top: 4px solid #376851;
+  box-shadow: 0 12px 34px rgba(22, 35, 28, .12);
+}
+.login-brand { display: flex; align-items: center; gap: 14px; padding-bottom: 18px; border-bottom: 1px solid #d5ddd8; }
+.login-brand .brand-mark { flex: 0 0 42px; }
+.login-brand .agency { margin: 0 0 4px; }
+.login-product { margin: 0; font-weight: 700; }
+.login-panel h1 { margin: 24px 0 4px; font-size: 24px; }
+.login-subtitle { margin: 0 0 20px; color: var(--muted); }
+.login-panel form > label { display: block; margin: 14px 0 5px; font-weight: 700; }
+.login-panel input { width: 100%; min-height: 42px; background: #fff; }
+.demo-credentials { margin: 7px 0 14px; color: #56655e; font-size: 14px; }
+.captcha-row { display: flex; align-items: center; gap: 10px; }
+#captchaCanvas { display: block; width: min(320px, calc(100% - 54px)); height: auto; border: 1px solid #bec8c2; }
+.captcha-refresh { width: 44px; height: 44px; flex: 0 0 44px; font-size: 24px; background: #f3f6f4; }
+#captchaInput { margin-top: 10px; letter-spacing: 3px; }
+.login-message { min-height: 24px; margin: 8px 0; color: #9b3028; font-size: 14px; }
+.login-submit { width: 100%; min-height: 44px; color: #fff; background: #285940; border-color: #285940; font-weight: 700; }
+.login-submit:disabled { opacity: .55; cursor: wait; }
+.login-scope { margin: 18px 0 0; padding-top: 12px; border-top: 1px solid #d5ddd8; color: #5d665f; font-size: 13px; }
+#logoutButton { background: transparent; }
+@media (max-width: 480px) {
+  .login-screen { padding: 14px; }
+  .login-panel { padding: 22px 18px; }
+}
+
 html,
 body {
   height: 100%;
@@ -721,11 +764,14 @@ pre {
     height: 54px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
     padding: 0 12px;
     border-bottom: 2px solid var(--line);
     background: #f8f3e8;
   }
+
+  .mobile-toggle strong { margin-right: auto; }
 
   .app-shell {
     height: calc(100vh - 94px);

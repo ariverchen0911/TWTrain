@@ -3,9 +3,9 @@ const sharp = require(process.env.GFT_SHARP || 'sharp');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const output = path.resolve('outputs/qa/v1.2.0');
+const output = path.resolve('outputs/qa/v1.3.0');
 fs.mkdirSync(output,{recursive:true});
-const results = {version:'1.2.0',checks:[],errors:[],terrainSamples:[],screenshots:[]};
+const results = {version:'1.3.0',checks:[],errors:[],terrainSamples:[],screenshots:[]};
 const check = (name, condition) => {assert(condition,name);results.checks.push(name);console.log('PASS',name)};
 
 (async()=>{
@@ -16,12 +16,25 @@ const check = (name, condition) => {assert(condition,name);results.checks.push(n
     page.on('pageerror',e=>results.errors.push(e.message));
     const tileResponses = [];
     page.on('response',r=>{if(/wmts|Terrain3D/.test(r.url()))tileResponses.push({url:r.url(),status:r.status()})});
-    // Expose the actual viewer only in this test response, without changing shipped code.
-    await page.route('**/js/app.js*',async route=>{
-      const response=await route.fetch();
-      await route.fulfill({response,body:(await response.text()).replace('viewer = new window.Cesium.Viewer','viewer = window.__qaViewer = new window.Cesium.Viewer')});
-    });
+    // Expose viewer and captcha state only in test responses.
+    async function instrument(tab) {
+      await tab.route('**/js/app.js*',async route=>{
+        const response=await route.fetch();
+        const body=(await response.text())
+          .replace('viewer = new window.Cesium.Viewer','viewer = window.__qaViewer = new window.Cesium.Viewer')
+          .replace('let captchaCode = "";','let captchaCode = ""; window.__qaCaptcha = () => captchaCode;');
+        await route.fulfill({response,body});
+      });
+    }
+    async function authenticate(tab) {
+      await tab.locator('#loginPassword').fill('84234755');
+      await tab.locator('#captchaInput').fill(await tab.evaluate(()=>window.__qaCaptcha()));
+      await tab.locator('#loginSubmit').click();
+      await tab.waitForFunction(()=>document.documentElement.dataset.authenticated==='true');
+    }
+    await instrument(page);
     await page.goto(process.env.GFT_URL || 'http://127.0.0.1:8000/index.html',{waitUntil:'domcontentloaded'});
+    await authenticate(page);
     await page.waitForFunction(()=>document.documentElement.dataset.terrainStatus==='ready' && document.documentElement.dataset.railOverlayStatus==='loaded',null,{timeout:60000});
     await page.waitForFunction(()=>window.__qaViewer.scene.globe.tilesLoaded && window.__qaViewer.dataSourceDisplay.ready,null,{timeout:60000});
     await page.waitForTimeout(5000);
@@ -31,7 +44,7 @@ const check = (name, condition) => {assert(condition,name);results.checks.push(n
       const sample=await C.sampleTerrain(v.terrainProvider,12,pts.map(p=>C.Cartographic.fromDegrees(...p)));
       return {version:document.documentElement.dataset.version,mode:v.scene.mode,layers:v.imageryLayers.length,url:v.imageryLayers.get(0).imageryProvider.url,heights:sample.map((p,i)=>({lon:pts[i][0],lat:pts[i][1],height:p.height})),entityCount:v.dataSources.get(0).entities.values.length};
     });
-    check('default v1.2.0, 3D and a single EMAP01 base layer',state.version==='1.2.0' && state.mode===3 && state.layers===1 && state.url.includes('/EMAP01/'));
+    check('default v1.3.0, 3D and a single EMAP01 base layer',state.version==='1.3.0' && state.mode===3 && state.layers===1 && state.url.includes('/EMAP01/'));
     results.terrainSamples=state.heights;
     const heights=state.heights.map(p=>p.height);
     check('global DEM samples contain real terrain relief',heights.every(Number.isFinite) && Math.max(...heights)-Math.min(...heights)>100);
@@ -129,16 +142,20 @@ const check = (name, condition) => {assert(condition,name);results.checks.push(n
     await page.selectOption('#sceneModeSelect','2d');await page.waitForTimeout(1800);await shot('mobile-2d');
     await page.selectOption('#sceneModeSelect','3d');
     const fallback=await context.newPage();
+    await instrument(fallback);
     await fallback.route('**/Cesium.js',route=>route.abort());
     await fallback.goto('http://127.0.0.1:8000/index.html',{waitUntil:'domcontentloaded'});
+    await authenticate(fallback);
     check('CDN outage shows an explicit fallback and 20 markers',await fallback.locator('#fallbackMap').isVisible() && await fallback.locator('#fallbackMap [data-layer="points"]').count()===20);
     await fallback.locator('#closeFeature').click();await fallback.locator('#fallbackMap [data-point="OF-01"] circle').click();await fallback.locator('#closeFeature').click();
     check('fallback feature close action works',await fallback.locator('#featureCard').isHidden());
     await fallback.close();
     const failure=await context.newPage();
+    await instrument(failure);
     const terrainRoute = /\/Terrain3D\/ImageServer(?:\/|\?|$)/;
     await failure.route(terrainRoute,route=>route.abort());
     await failure.goto('http://127.0.0.1:8000/index.html',{waitUntil:'domcontentloaded'});
+    await authenticate(failure);
     await failure.waitForFunction(()=>document.documentElement.dataset.terrainStatus==='error',null,{timeout:30000});
     check('DEM outage is explicit and retryable',await failure.locator('#retryTerrain').isVisible());
     await failure.unroute(terrainRoute);await failure.locator('#retryTerrain').click();

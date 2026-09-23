@@ -68,7 +68,7 @@
   window.GFTData = {
     project: {
       code: "GFT",
-      version: "1.2.0",
+      version: "1.3.0",
       title: "花蓮縣光復隧道科技監測資訊整合系統",
       disclaimer: "POC 示意資料，非正式監測成果"
     },

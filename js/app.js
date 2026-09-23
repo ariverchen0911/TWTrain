@@ -24,19 +24,141 @@
   let selectedFeatureId = null;
   let returningHome = false;
   let terrainLoading = false;
+  let applicationStarted = false;
+  let captchaCode = "";
+  let captchaExpiresAt = 0;
+  let failedLoginAttempts = 0;
+  let lockedUntil = 0;
 
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
   document.addEventListener("DOMContentLoaded", () => {
-    buildNavigation();
-    $$('[data-version]').forEach((node) => node.textContent = `v${data.project.version}`);
     document.documentElement.dataset.version = data.project.version;
-    fillControls();
-    bindEvents();
-    initCesium();
-    engine.onChange(render);
+    document.documentElement.dataset.authenticated = "false";
+    $$('[data-version]').forEach((node) => node.textContent = `v${data.project.version}`);
+    drawCaptcha();
+    $("#refreshCaptcha").addEventListener("click", drawCaptcha);
+    $("#captchaInput").addEventListener("input", (event) => {
+      event.target.value = event.target.value.replace(/\D/g, "").slice(0, 4);
+    });
+    $("#loginForm").addEventListener("submit", submitLogin);
+    $("#logoutButton").addEventListener("click", logout);
+    $("#mobileLogoutButton").addEventListener("click", logout);
+    $("#loginPassword").focus();
   });
+
+  function drawCaptcha() {
+    let nextCode;
+    do {
+      const digits = new Uint32Array(1);
+      crypto.getRandomValues(digits);
+      nextCode = String(digits[0] % 10000).padStart(4, "0");
+    } while (nextCode === captchaCode);
+    captchaCode = nextCode;
+    captchaExpiresAt = Date.now() + 2 * 60 * 1000;
+    const canvas = $("#captchaCanvas");
+    const context = canvas.getContext("2d");
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#e5e9e6";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < 8; i += 1) {
+      context.beginPath();
+      context.strokeStyle = i % 2 ? "#71877d" : "#9c7262";
+      context.lineWidth = 1 + (i % 2);
+      context.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      context.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      context.stroke();
+    }
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.font = "700 35px monospace";
+    [...captchaCode].forEach((digit, index) => {
+      context.save();
+      context.translate(48 + index * 70, 44);
+      context.rotate((Math.random() - 0.5) * 0.22);
+      context.fillStyle = ["#293c35", "#704633", "#314f70", "#635037"][index];
+      context.fillText(digit, 0, 0);
+      context.restore();
+    });
+    for (let i = 0; i < 70; i += 1) {
+      context.fillStyle = i % 2 ? "#53685e" : "#925d42";
+      context.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+    }
+    $("#captchaInput").value = "";
+    $("#loginMessage").textContent = "";
+  }
+
+  function submitLogin(event) {
+    event.preventDefault();
+    const now = Date.now();
+    if (now < lockedUntil) {
+      $("#loginMessage").textContent = `登入已暫停，請於 ${Math.ceil((lockedUntil - now) / 1000)} 秒後再試。`;
+      return;
+    }
+    const username = $("#loginUsername").value.trim();
+    const password = $("#loginPassword").value;
+    const enteredCaptcha = $("#captchaInput").value;
+    if (!/^\d{4}$/.test(enteredCaptcha) || now > captchaExpiresAt || enteredCaptcha !== captchaCode) {
+      rejectLogin("驗證碼錯誤或已逾時，請重新輸入。", now);
+      return;
+    }
+    if (username !== "geoinfor" || password !== "84234755") {
+      rejectLogin("帳號或密碼錯誤。", now);
+      return;
+    }
+    failedLoginAttempts = 0;
+    $("#loginPassword").value = "";
+    $("#loginScreen").hidden = true;
+    document.body.classList.remove("auth-required");
+    document.documentElement.dataset.authenticated = "true";
+    if (!applicationStarted) {
+      applicationStarted = true;
+      buildNavigation();
+      fillControls();
+      bindEvents();
+      initCesium();
+      engine.onChange(render);
+    } else if (viewer) {
+      setTimeout(() => viewer.resize(), 80);
+    }
+    switchView("map");
+  }
+
+  function rejectLogin(message, now) {
+    failedLoginAttempts += 1;
+    $("#loginPassword").value = "";
+    drawCaptcha();
+    $("#loginMessage").textContent = message;
+    if (failedLoginAttempts >= 5) {
+      lockedUntil = now + 30 * 1000;
+      $("#loginSubmit").disabled = true;
+      const unlock = setInterval(() => {
+        const remaining = lockedUntil - Date.now();
+        if (remaining <= 0) {
+          clearInterval(unlock);
+          failedLoginAttempts = 0;
+          $("#loginSubmit").disabled = false;
+          $("#loginMessage").textContent = "可以重新登入。";
+        } else {
+          $("#loginMessage").textContent = `登入已暫停，請於 ${Math.ceil(remaining / 1000)} 秒後再試。`;
+        }
+      }, 250);
+    }
+  }
+
+  function logout() {
+    if (engine.playing) engine.pause();
+    closeFeature();
+    document.body.classList.add("auth-required");
+    document.documentElement.dataset.authenticated = "false";
+    $("#loginScreen").hidden = false;
+    $("#loginMessage").textContent = "";
+    $("#loginUsername").value = "geoinfor";
+    $("#loginPassword").value = "";
+    drawCaptcha();
+    $("#loginPassword").focus();
+  }
 
   function buildNavigation() {
     const nav = $("#mainNav");
